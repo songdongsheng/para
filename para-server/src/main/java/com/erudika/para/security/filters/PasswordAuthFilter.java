@@ -115,7 +115,8 @@ public class PasswordAuthFilter extends AbstractAuthenticationProcessingFilter {
 			// NOTE TO SELF:
 			// do not overwrite 'u' here - overwrites the password hash!
 			user = User.readUserForIdentifier(u);
-			if (user == null) {
+			if (user == null && (Config.getConfigBoolean("security.allow_auto_register_users", false)
+					|| email.equals(Config.ADMIN_IDENT))) {
 				user = new User();
 				user.setActive(Config.getConfigBoolean("security.allow_unverified_emails", false));
 				user.setAppid(appid);

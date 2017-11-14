@@ -225,10 +225,12 @@ public final class ParaObjectUtils {
 				if (field.isAnnotationPresent(Stored.class) && dontSkip) {
 					String name = field.getName();
 					Object value = PropertyUtils.getProperty(pojo, name);
-					if (!Utils.isBasicType(field.getType()) && flattenNestedObjectsToString) {
-						value = getJsonWriterNoIdent().writeValueAsString(value);
+					if (!(value == null || (value instanceof List && ((List) value).isEmpty()) || (value instanceof Map && ((Map) value).isEmpty()))) {
+						if (!Utils.isBasicType(field.getType()) && flattenNestedObjectsToString) {
+							value = getJsonWriterNoIdent().writeValueAsString(value);
+						}
+						map.put(name, value);
 					}
-					map.put(name, value);
 				}
 			}
 		} catch (Exception ex) {
@@ -392,7 +394,7 @@ public final class ParaObjectUtils {
 					boolean isInterface = Modifier.isInterface(coreClass.getModifiers());
 					boolean isCoreObject = ParaObject.class.isAssignableFrom(coreClass);
 					if (isCoreObject && !isAbstract && !isInterface) {
-						CORE_CLASSES.put(coreClass.getSimpleName().toLowerCase(), coreClass);
+						CORE_CLASSES.put(toKey(coreClass), coreClass);
 					}
 				}
 				logger.debug("Found {} ParaObject classes: {}", CORE_CLASSES.size(), CORE_CLASSES);
@@ -401,6 +403,17 @@ public final class ParaObjectUtils {
 			}
 		}
 		return Collections.unmodifiableMap(CORE_CLASSES);
+	}
+
+	private static String toKey(Class<? extends ParaObject> coreClass) {
+		String simpleName = coreClass.getSimpleName();
+		if (coreClass.getName().startsWith("cn.abrain")) {
+			char[] chars = simpleName.toCharArray();
+			chars[0] = Character.toLowerCase(chars[0]);
+			return new String(chars);
+		} else {
+			return simpleName.toLowerCase();
+		}
 	}
 
 	/**

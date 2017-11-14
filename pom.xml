@@ -11,7 +11,7 @@
 		<url>https://erudika.com</url>
 	</organization>
 
-	<name>Para</name>
+	<name>Para 1.26</name>
 	<description>Para - a general-purpose back-end framework for the cloud.</description>
 	<url>https://paraio.org</url>
 
@@ -74,7 +74,7 @@
 		<sonar.java.codeCoveragePlugin>jacoco</sonar.java.codeCoveragePlugin>
 
 		<netbeans.hint.j2eeVersion>1.7</netbeans.hint.j2eeVersion>
-		<skipTests>false</skipTests>
+		<skipTests>true</skipTests>
 		<skipITs>${skipTests}</skipITs>
 		<skipUTs>${skipTests}</skipUTs>
 		<deployPluginVer>2.8.2</deployPluginVer>

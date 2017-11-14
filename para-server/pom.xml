@@ -304,6 +304,60 @@
 			<version>${springSecVer}</version>
 			<scope>test</scope>
 		</dependency>-->
+
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>druid</artifactId>
+			<version>1.1.5</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.erudika</groupId>
+			<artifactId>para-search-elasticsearch</artifactId>
+			<version>1.25.7</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>23.4-jre</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-to-slf4j</artifactId>
+			<version>2.9.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.elasticsearch.client</groupId>
+			<artifactId>transport</artifactId>
+			<version>5.6.4</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mariadb.jdbc</groupId>
+			<artifactId>mariadb-java-client</artifactId>
+			<version>2.2.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mozilla</groupId>
+			<artifactId>rhino</artifactId>
+			<version>1.7.7.2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.1.4</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.xerial</groupId>
+			<artifactId>sqlite-jdbc</artifactId>
+			<version>3.20.1</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -326,7 +380,6 @@
 							<goal>stop</goal>
 						</goals>
 						<configuration>
-							<scope>test</scope>
 							<skip>${skipITs}</skip>
 							<port>8000</port>
 							<dist>${project.build.directory}/dynamodb-dist</dist>
@@ -345,7 +398,6 @@
 							<goal>unpack</goal>
 						</goals>
 						<configuration>
-							<scope>test</scope>
 							<skip>${skipITs}</skip>
 							<artifactItems>
 								<artifactItem>
@@ -376,7 +428,6 @@
 							<encoding>UTF-8</encoding>
 							<consoleOutput>true</consoleOutput>
 							<failsOnError>true</failsOnError>
-							<linkXRef>false</linkXRef>
 						</configuration>
 						<goals>
 							<goal>check</goal>

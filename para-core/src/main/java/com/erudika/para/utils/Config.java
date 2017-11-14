@@ -20,12 +20,13 @@ package com.erudika.para.utils;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValue;
 import com.typesafe.config.ConfigValueType;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * This class loads configuration settings from a file and sets defaults.
@@ -105,17 +106,17 @@ public final class Config {
 
 	//////////  INITIALIZATION PARAMETERS  //////////////
 	/**
-	 * Maximum results per page - limits the number of items to show in search results. Default is 30.
+	 * Maximum results per page - limits the number of items to show in search results. Default is 1000.
 	 */
-	public static final int MAX_ITEMS_PER_PAGE = getConfigInt("max_items_per_page", 30);
+	public static final int MAX_ITEMS_PER_PAGE = getConfigInt("max_items_per_page", 1000);
 	/**
-	 * Pagination limit - highest page number, default is 1000.
+	 * Pagination limit - highest page number, default is 10000.
 	 */
-	public static final int MAX_PAGES = getConfigInt("max_pages", 1000);
+	public static final int MAX_PAGES = getConfigInt("max_pages", 10000);
 	/**
-	 * Pagination limit - maximum number of results per page, default is 256.
+	 * Pagination limit - maximum number of results per page, default is 1000.
 	 */
-	public static final int MAX_PAGE_LIMIT = getConfigInt("max_page_limit", 256);
+	public static final int MAX_PAGE_LIMIT = getConfigInt("max_page_limit", 1000);
 	/**
 	 * Maximum image size (longest edge) - default is 1024 (pixels).
 	 */
@@ -125,9 +126,9 @@ public final class Config {
 	 */
 	public static final int MIN_PASS_LENGTH = getConfigInt("min_password_length", 6);
 	/**
-	 * Maximum number of data types that can be defined per app - default is 256.
+	 * Maximum number of data types that can be defined per app - default is 1000.
 	 */
-	public static final int MAX_DATATYPES_PER_APP = getConfigInt("max_datatypes_per_app", 256);
+	public static final int MAX_DATATYPES_PER_APP = getConfigInt("max_datatypes_per_app", 1000);
 	/**
 	 * Maximum size of incoming JSON objects - default is 1048576 (bytes).
 	 */

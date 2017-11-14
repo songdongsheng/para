@@ -20,14 +20,18 @@ package com.erudika.para.persistence;
 import com.erudika.para.Para;
 import com.erudika.para.utils.Config;
 import com.google.inject.AbstractModule;
-import java.util.ServiceLoader;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ServiceLoader;
 
 /**
  * The default persistence module.
  * @author Alex Bogdanovski [alex@erudika.com]
  */
 public class PersistenceModule extends AbstractModule {
+	private static final Logger logger = LoggerFactory.getLogger(PersistenceModule.class);
 
 	protected void configure() {
 		String selectedDAO = Config.getConfigParam("dao", "");
@@ -49,8 +53,8 @@ public class PersistenceModule extends AbstractModule {
 					// external plugins - MongoDB, Cassandra, xSQL, etc.
 					bind(DAO.class).to(daoPlugin.getClass()).asEagerSingleton();
 				} else {
-					// in-memory DAO - default fallback
-					bindToDefault();
+					logger.error("Could not load user specified dao plugin: '{}'", selectedDAO);
+					System.exit(1);
 				}
 			}
 		}

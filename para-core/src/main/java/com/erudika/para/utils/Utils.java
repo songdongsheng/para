@@ -20,6 +20,7 @@ package com.erudika.para.utils;
 import com.erudika.para.annotations.Email;
 import com.erudika.para.core.ParaObject;
 import com.samskivert.mustache.Mustache;
+import com.github.songdongsheng.identifier.Snowflake;
 import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
 import java.io.IOException;
@@ -52,7 +53,6 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.LocaleUtils;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.jsoup.Jsoup;
 import org.mindrot.jbcrypt.BCrypt;
@@ -76,23 +76,14 @@ public final class Utils {
 	private static Utils instance;
 
 	//////////  ID GEN VARS  //////////////
-	private static final long TIMER_OFFSET = 1310084584692L; // ~July 2011
-	private static final long WORKER_ID_BITS = 5L;
-	private static final long DATACENTER_ID_BITS = 5L;
-	private static final long MAX_WORKER_ID = -1L ^ (-1L << WORKER_ID_BITS);
-	private static final long MAX_DATACENTER_ID = -1L ^ (-1L << DATACENTER_ID_BITS);
-	private static final long SEQUENCE_BITS = 12L;
-	private static final long WORKER_ID_SHIFT = SEQUENCE_BITS;
-	private static final long DATACENTER_ID_SHIFT = SEQUENCE_BITS + WORKER_ID_BITS;
-	private static final long TIMESTAMP_LEFT_SHIFT = SEQUENCE_BITS + WORKER_ID_BITS + DATACENTER_ID_BITS;
-	private static final long SEQUENCE_MASK = -1L ^ (-1L << SEQUENCE_BITS);
-	private static long lastTimestamp = -1L;
-	private static long dataCenterId = 0L;	// only one datacenter atm
-	private static long workerId;	// max 1024
-	private static long sequence = 0L;
+	private static final Snowflake SNOWFLAKE;
 
 	static {
-		initIdGenerator();
+		int workerId = Config.getConfigInt(Config.WORKER_ID, 1);	// max 1024
+		if (workerId > 1023 || workerId < 0) {
+			workerId = new Random().nextInt(32);
+		}
+		SNOWFLAKE = new Snowflake(workerId);
 		NUMBER_FORMAT.setMinimumFractionDigits(2);
 		NUMBER_FORMAT.setMaximumFractionDigits(2);
 	}
@@ -119,23 +110,6 @@ public final class Utils {
 			humantime = new HumanTime();
 		}
 		return humantime;
-	}
-
-	/////////////////////////////////////////////
-	//	    	   INIT FUNCTIONS
-	/////////////////////////////////////////////
-
-	private static void initIdGenerator() {
-		String workerID = Config.WORKER_ID;
-		workerId = NumberUtils.toLong(workerID, 1);
-
-		if (workerId > MAX_WORKER_ID || workerId < 0) {
-			workerId = new Random().nextInt((int) MAX_WORKER_ID + 1);
-		}
-
-		if (dataCenterId > MAX_DATACENTER_ID || dataCenterId < 0) {
-			dataCenterId =  new Random().nextInt((int) MAX_DATACENTER_ID + 1);
-		}
 	}
 
 	/////////////////////////////////////////////
@@ -795,30 +769,7 @@ public final class Utils {
 	 * @return a long unique ID string of digits
 	 */
 	public static synchronized String getNewId() {
-		// unique across JVMs as long as each has a different workerID
-		// based on Twitter's Snowflake algorithm
-		long timestamp = timestamp();
-
-		if (lastTimestamp == timestamp) {
-			sequence = (sequence + 1) & SEQUENCE_MASK;
-			if (sequence == 0) {
-				timestamp = tilNextMillis(lastTimestamp);
-			}
-		} else {
-			sequence = 0;
-		}
-
-		if (timestamp < lastTimestamp) {
-			throw new IllegalStateException(String.format("Clock moved backwards.  "
-					+ "Refusing to generate id for %d milliseconds", lastTimestamp - timestamp));
-		}
-
-		lastTimestamp = timestamp;
-		return Long.toString(((timestamp - TIMER_OFFSET) << TIMESTAMP_LEFT_SHIFT) |
-											(dataCenterId << DATACENTER_ID_SHIFT) |
-													(workerId << WORKER_ID_SHIFT) |
-																	(sequence));
-
+		return SNOWFLAKE.next();
 	}
 
 	private static long tilNextMillis(long lastTimestamp) {
