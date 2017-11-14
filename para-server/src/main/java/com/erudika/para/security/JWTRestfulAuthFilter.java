@@ -108,7 +108,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 				SecurityContextHolder.getContext().getAuthentication() == null) {
 			try {
 				// validate token if present
-				JWTAuthentication jwt = getJWTfromRequest(request);
+				JWTAuthentication jwt = getJWTfromRequest(request, response);
 				if (jwt != null) {
 					Authentication auth = authenticationManager.authenticate(jwt);
 					// success!
@@ -143,6 +143,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 			if (!App.isRoot(appid) || Config.getConfigBoolean("clients_can_access_root_app", false)) {
 				App app = Para.getDAO().read(App.id(appid));
 				if (app != null) {
+					response.setHeader("APP_ID", app.getAppIdentifier());
 					UserAuthentication userAuth = getOrCreateUser(app, provider, token);
 					User user = SecurityUtils.getAuthenticatedUser(userAuth);
 					if (user != null) {
@@ -175,7 +176,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 	}
 
 	private boolean refreshTokenHandler(HttpServletRequest request, HttpServletResponse response) {
-		JWTAuthentication jwtAuth = getJWTfromRequest(request);
+		JWTAuthentication jwtAuth = getJWTfromRequest(request, response);
 		if (jwtAuth != null) {
 			try {
 				User user = SecurityUtils.getAuthenticatedUser(jwtAuth);
@@ -183,6 +184,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 					// check and reissue token
 					jwtAuth = (JWTAuthentication) authenticationManager.authenticate(jwtAuth);
 					if (jwtAuth != null && jwtAuth.getApp() != null) {
+						response.setHeader("APP_ID", jwtAuth.getApp().getAppIdentifier());
 						SignedJWT newToken = SecurityUtils.generateJWToken(user, jwtAuth.getApp());
 						if (newToken != null) {
 							succesHandler(response, user, newToken);
@@ -200,7 +202,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 	}
 
 	private boolean revokeAllTokensHandler(HttpServletRequest request, HttpServletResponse response) {
-		JWTAuthentication jwtAuth = getJWTfromRequest(request);
+		JWTAuthentication jwtAuth = getJWTfromRequest(request, response);
 		if (jwtAuth != null) {
 			try {
 				User user = SecurityUtils.getAuthenticatedUser(jwtAuth);
@@ -208,6 +210,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 					jwtAuth = (JWTAuthentication) authenticationManager.authenticate(jwtAuth);
 					if (jwtAuth != null && jwtAuth.getApp() != null) {
 						user.resetTokenSecret();
+						response.setHeader("APP_ID", jwtAuth.getApp().getAppIdentifier());
 						CoreUtils.getInstance().overwrite(jwtAuth.getApp().getAppIdentifier(), user);
 						RestUtils.returnStatusResponse(response, HttpServletResponse.SC_OK,
 								Utils.formatMessage("All tokens revoked for user {0}!", user.getId()));
@@ -234,6 +237,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 				jwt.put("expires", token.getJWTClaimsSet().getExpirationTime().getTime());
 				result.put("jwt", jwt);
 				result.put("user", user);
+				response.setHeader("Authorization", "Bearer" + token.serialize());
 			} catch (ParseException ex) {
 				logger.info("Unable to parse JWT.", ex);
 				RestUtils.returnStatusResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Bad token.");
@@ -244,7 +248,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 		}
 	}
 
-	private JWTAuthentication getJWTfromRequest(HttpServletRequest request) {
+	private JWTAuthentication getJWTfromRequest(HttpServletRequest request, HttpServletResponse response) {
 		String token = request.getHeader(HttpHeaders.AUTHORIZATION);
 		if (token == null) {
 			token = request.getParameter(HttpHeaders.AUTHORIZATION);
@@ -256,6 +260,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 				String appid = (String) jwt.getJWTClaimsSet().getClaim(Config._APPID);
 				App app = Para.getDAO().read(App.id(appid));
 				if (app != null) {
+					response.setHeader("APP_ID", app.getAppIdentifier());
 					User user = Para.getDAO().read(app.getAppIdentifier(), userid);
 					if (user != null) {
 						// standard user JWT auth, restricted access through resource permissions

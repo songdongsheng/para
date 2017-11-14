@@ -20,14 +20,18 @@ package com.erudika.para.search;
 import com.erudika.para.Para;
 import com.erudika.para.utils.Config;
 import com.google.inject.AbstractModule;
-import java.util.ServiceLoader;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ServiceLoader;
 
 /**
  * The default search module.
  * @author Alex Bogdanovski [alex@erudika.com]
  */
 public class SearchModule extends AbstractModule {
+	private static final Logger logger = LoggerFactory.getLogger(SearchModule.class);
 
 	protected void configure() {
 		String selectedSearch = Config.getConfigParam("search", "");
@@ -38,8 +42,8 @@ public class SearchModule extends AbstractModule {
 			if (searchPlugin != null) {
 				bind(Search.class).to(searchPlugin.getClass()).asEagerSingleton();
 			} else {
-				// default fallback - not implemented!
-				bindToDefault();
+				logger.error("Could not load user specified dao plugin: '{}'", selectedSearch);
+				System.exit(1);
 			}
 		}
 	}

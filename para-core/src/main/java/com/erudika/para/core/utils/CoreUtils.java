@@ -155,7 +155,8 @@ public enum CoreUtils implements InitializeListener {
 				if (obj.getUpdated() == null) {
 					obj.setUpdated(System.currentTimeMillis());
 				}
-				return getDao().create(appid, obj);
+				obj.update();
+				return obj.getId();
 			}
 			return null;
 		}

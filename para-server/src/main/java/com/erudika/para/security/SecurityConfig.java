@@ -34,7 +34,10 @@ import com.typesafe.config.ConfigObject;
 import com.typesafe.config.ConfigValue;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.ServiceLoader;
 import javax.annotation.security.DeclareRoles;
+import javax.servlet.Filter;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
@@ -182,6 +185,17 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			}
 			RestAuthFilter restFilter = new RestAuthFilter();
 			http.addFilterAfter(restFilter, JWTRestfulAuthFilter.class);
+			loadCustomFilter(http, RestAuthFilter.class);
+		}
+	}
+
+	private static void loadCustomFilter(HttpSecurity http, Class afterClass) {
+		ServiceLoader<Filter> loader = ServiceLoader.load(Filter.class, Para.getParaClassLoader());
+		for (Filter filter : loader) {
+			if (filter != null) {
+				http.addFilterAfter(filter, afterClass);
+				logger.info("add filter '{}'", filter.getClass().getName());
+			}
 		}
 	}
 
