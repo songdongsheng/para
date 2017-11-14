@@ -191,13 +191,13 @@ public final class SecurityUtils {
 				Date now = new Date();
 				JWTClaimsSet.Builder claimsSet = new JWTClaimsSet.Builder();
 				String userSecret = "";
-				claimsSet.issueTime(now);
 				claimsSet.expirationTime(new Date(now.getTime() + (app.getTokenValiditySec() * 1000)));
 				claimsSet.notBeforeTime(now);
 				claimsSet.claim("refresh", getNextRefresh(app.getTokenValiditySec()));
 				claimsSet.claim(Config._APPID, app.getId());
 				if (user != null) {
 					claimsSet.subject(user.getId());
+					claimsSet.claim("uid", user.getIdentifier());
 					userSecret = user.getTokenSecret();
 				}
 				JWSSigner signer = new MACSigner(app.getSecret() + userSecret);

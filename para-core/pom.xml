@@ -213,6 +213,11 @@
 			<artifactId>javax.el</artifactId>
 			<version>2.2.6</version>
 		</dependency>
+		<dependency>
+			<groupId>com.github.songdongsheng</groupId>
+			<artifactId>identifier</artifactId>
+			<version>1.0.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -271,7 +276,6 @@
 							<encoding>UTF-8</encoding>
 							<consoleOutput>true</consoleOutput>
 							<failsOnError>true</failsOnError>
-							<linkXRef>false</linkXRef>
 						</configuration>
 						<goals>
 							<goal>check</goal>

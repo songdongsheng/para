@@ -108,7 +108,11 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 			indexedAnno = Config.isSearchEnabled() ? superMethod.getAnnotation(Indexed.class) : null;
 			cachedAnno = Config.isCacheEnabled() ? superMethod.getAnnotation(Cached.class) : null;
 		} catch (Exception e) {
-			logger.error(null, e);
+			if (! (e instanceof NoSuchMethodException)) {
+				logger.error(null, e);
+			} else {
+				logger.error("DAO class no method '{}'", m.getName());
+			}
 		}
 
 		Object[] args = mi.getArguments();

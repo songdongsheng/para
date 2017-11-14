@@ -1,46 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+	<jmxConfigurator/>
 
-	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-			<pattern>%-20(%d{yyyy-MM-dd HH:mm:ss} %highlight([%-5level])) %msg%n</pattern>
+	<appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<Pattern>%date{YYYY-MM-dd HH:mm:ss.SSSX} [%level] [%thread] %logger{36}.%method - %msg%n</Pattern>
 		</encoder>
 	</appender>
 
-	<appender name="SYSLOG" class="ch.qos.logback.classic.net.SyslogAppender">
-		<facility>LOCAL0</facility>
-		<suffixPattern>[%-5level] %msg%n</suffixPattern>
-	</appender>
-
-	<appender name="ROLLING" class="ch.qos.logback.core.rolling.RollingFileAppender">
-		<file>para.log</file>
+	<appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-			<!-- rollover monthly -->
-			<fileNamePattern>para-%d{yyyy-MM}.log.zip</fileNamePattern>
-			<maxHistory>12</maxHistory>
-			<totalSizeCap>3GB</totalSizeCap>
+			<fileNamePattern>log-%d{yyyyMMdd}.txt</fileNamePattern>
+			<maxHistory>90</maxHistory>
 		</rollingPolicy>
 		<encoder>
-			<pattern>%-26(%d [%-5level]) %logger{35} - %msg%n</pattern>
+			<pattern>%date{YYYY-MM-dd HH:mm:ss.SSSX} [%level] [usermgr-01] [%thread] %logger{36}.%method - %msg%n</pattern>
 		</encoder>
 	</appender>
 
-	<logger name="ch.qos.logback" level="WARN"/>
-	<logger name="org.apache" level="WARN"/>
-	<logger name="org.elasticsearch" level="INFO"/>
-	<logger name="org.springframework" level="WARN"/>
-	<logger name="org.eclipse.jetty" level="WARN"/>
-	<logger name="com.erudika" level="INFO"/>
-	<logger name="com.amazonaws" level="INFO"/>
-	<logger name="org.tuckey" level="WARN"/>
-	<logger name="org.openid4java" level="ERROR"/>
-	<logger name="org.glassfish" level="WARN"/>
-	<logger name="org.hibernate" level="WARN"/>
-	<logger name="com.hazelcast" level="INFO"/>
+	<logger name="cn.abrain" level="debug" additivity="false">
+		<appender-ref ref="console"/>
+		<appender-ref ref="file"/>
+	</logger>
 
-	<root level="INFO">
-		<appender-ref ref="STDOUT" />
-		<appender-ref ref="SYSLOG" />
-		<appender-ref ref="ROLLING" />
+	<logger name="ACCESS_LOG" level="debug" additivity="false">
+		<appender-ref ref="console"/>
+		<appender-ref ref="file"/>
+	</logger>
+
+	<root level="info">
+		<appender-ref ref="console"/>
+		<appender-ref ref="file"/>
 	</root>
 </configuration>
