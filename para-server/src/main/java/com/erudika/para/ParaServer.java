@@ -177,7 +177,7 @@ public class ParaServer implements WebApplicationInitializer, Ordered {
 					}
 					RequestLogHandler reqLogs = new RequestLogHandler();
 					reqLogs.setServer(server);
-					RequestLogImpl rli = new RequestLogImpl();
+					com.erudika.para.utils.RequestLogImpl rli = new com.erudika.para.utils.RequestLogImpl();
 					rli.setResource("/logback-access.xml");
 					rli.setQuiet(true);
 					rli.start();
