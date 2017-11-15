@@ -225,12 +225,22 @@ public final class ParaObjectUtils {
 				if (field.isAnnotationPresent(Stored.class) && dontSkip) {
 					String name = field.getName();
 					Object value = PropertyUtils.getProperty(pojo, name);
-					if (!(value == null || (value instanceof List && ((List) value).isEmpty()) || (value instanceof Map && ((Map) value).isEmpty()))) {
-						if (!Utils.isBasicType(field.getType()) && flattenNestedObjectsToString) {
-							value = getJsonWriterNoIdent().writeValueAsString(value);
+					if ("properties".equals(name)) {
+						map.putAll((Map) value);
+					} else {
+						if (!(value == null || (value instanceof List && ((List) value).isEmpty()) || (value instanceof Map && ((Map) value).isEmpty()))) {
+							if (!Utils.isBasicType(field.getType()) && flattenNestedObjectsToString) {
+								value = getJsonWriterNoIdent().writeValueAsString(value);
+							}
+							map.put(name, value);
 						}
-						map.put(name, value);
 					}
+				}
+			}
+
+			for(Map.Entry<String, Object> entry: map.entrySet()) {
+				if (entry.getValue() instanceof Map) {
+					entry.setValue(getJsonWriterNoIdent().writeValueAsString(entry.getValue()));
 				}
 			}
 		} catch (Exception ex) {
