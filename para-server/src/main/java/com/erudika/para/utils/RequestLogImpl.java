@@ -54,6 +54,9 @@ public class RequestLogImpl extends ContextBase implements RequestLog, AppenderA
             token = jettyRequest.getParameter(HttpHeaders.AUTHORIZATION);
         }
         try {
+            if (token == null) {
+                return;
+            }
             //解析token
             SignedJWT jwt = SignedJWT.parse(token.substring(6).trim());
             String userid = jwt.getJWTClaimsSet().getSubject();
