@@ -331,6 +331,14 @@ public final class ParaObjectUtils {
 					if (value == null) {
 						((Sysprop) pojo).removeProperty(name);
 					} else {
+						if (value instanceof String) {
+							String str = (String) value;
+							if (str.charAt(0) == '{' || str.charAt(0) == '[') {
+								try {
+									value = getJsonReader(str.charAt(0) == '{' ? Map.class: List.class).readValue((String) value);
+								} catch (IOException ignored) {}
+							}
+						}
 						((Sysprop) pojo).addProperty(name, value);
 					}
 				}
