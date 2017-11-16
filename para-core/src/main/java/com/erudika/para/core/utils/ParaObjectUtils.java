@@ -329,17 +329,21 @@ public final class ParaObjectUtils {
 				// handle the case where we have custom user-defined properties
 				// which are not defined as Java class fields
 				if (!PropertyUtils.isReadable(pojo, name)) {
+					if (value != null && value instanceof String) {
+						String str = ((String) value).trim();
+						if (str.length() < 1) {
+							value = null;
+						} else if(str.charAt(0) == '{' || str.charAt(0) == '[') {
+							try {
+								value = getJsonReader(str.charAt(0) == '{' ? Map.class : List.class).readValue((String) value);
+							} catch (IOException ignored) {
+							}
+						}
+					}
+
 					if (value == null) {
 						((Sysprop) pojo).removeProperty(name);
 					} else {
-						if (value instanceof String) {
-							String str = (String) value;
-							if (str.charAt(0) == '{' || str.charAt(0) == '[') {
-								try {
-									value = getJsonReader(str.charAt(0) == '{' ? Map.class: List.class).readValue((String) value);
-								} catch (IOException ignored) {}
-							}
-						}
 						((Sysprop) pojo).addProperty(name, value);
 					}
 				}
