@@ -358,6 +358,11 @@
 			<artifactId>sqlite-jdbc</artifactId>
 			<version>3.20.1</version>
 		</dependency>
+        <dependency>
+            <groupId>cn.abrain.backend.api</groupId>
+            <artifactId>baas-entity</artifactId>
+            <version>1.0.1</version>
+        </dependency>
 	</dependencies>
 
 	<build>
