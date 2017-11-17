@@ -328,7 +328,7 @@ public final class ParaObjectUtils {
 				Object value = entry.getValue();
 				// handle the case where we have custom user-defined properties
 				// which are not defined as Java class fields
-				if (!PropertyUtils.isReadable(pojo, name)) {
+				//if (!PropertyUtils.isReadable(pojo, name)) {
 					if (value != null && value instanceof String) {
 						String str = ((String) value).trim();
 						if (str.length() < 1) {
@@ -346,7 +346,7 @@ public final class ParaObjectUtils {
 					} else {
 						((Sysprop) pojo).addProperty(name, value);
 					}
-				}
+				//}
 			}
 		}
 	}
