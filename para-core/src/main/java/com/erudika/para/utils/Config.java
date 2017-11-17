@@ -240,7 +240,7 @@ public final class Config {
 	/**
 	 * The package path (e.g. org.company.app.core) where all domain objects are defined.
 	 */
-	public static final String CORE_PACKAGE_NAME = getConfigParam("core_package_name", "");
+	public static final String CORE_PACKAGE_NAME = getConfigParam("core_package_name", "cn.abrain.baas.rbac.entity");
 	/**
 	 * Expiration of signed API request, in seconds. Default: 15 minutes
 	 */

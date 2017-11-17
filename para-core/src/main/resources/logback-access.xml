@@ -2,9 +2,9 @@
 <configuration>
     <appender name="ACCESS" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
+            <!-- <pattern>combined</pattern> -->
             <pattern>%h %l %u %t "%r" %s %b "%i{Referer}" "%i{User-Agent}" User:[%reqAttribute{usermgr}] spendTime:[%reqAttribute{spendTime}]%n</pattern>
         </encoder>
     </appender>
-
     <appender-ref ref="ACCESS" />
 </configuration>

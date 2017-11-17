@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -225,12 +226,22 @@ public final class ParaObjectUtils {
 				if (field.isAnnotationPresent(Stored.class) && dontSkip) {
 					String name = field.getName();
 					Object value = PropertyUtils.getProperty(pojo, name);
-					if (!(value == null || (value instanceof List && ((List) value).isEmpty()) || (value instanceof Map && ((Map) value).isEmpty()))) {
-						if (!Utils.isBasicType(field.getType()) && flattenNestedObjectsToString) {
-							value = getJsonWriterNoIdent().writeValueAsString(value);
+					if ("properties".equals(name)) {
+						map.putAll((Map) value);
+					} else {
+						if (!(value == null || (value instanceof List && ((List) value).isEmpty()) || (value instanceof Map && ((Map) value).isEmpty()))) {
+							if (!Utils.isBasicType(field.getType()) && flattenNestedObjectsToString) {
+								value = getJsonWriterNoIdent().writeValueAsString(value);
+							}
+							map.put(name, value);
 						}
-						map.put(name, value);
 					}
+				}
+			}
+
+			for(Map.Entry<String, Object> entry: map.entrySet()) {
+				if (entry.getValue() instanceof Map) {
+					entry.setValue(getJsonWriterNoIdent().writeValueAsString(entry.getValue()));
 				}
 			}
 		} catch (Exception ex) {
@@ -317,13 +328,25 @@ public final class ParaObjectUtils {
 				Object value = entry.getValue();
 				// handle the case where we have custom user-defined properties
 				// which are not defined as Java class fields
-				if (!PropertyUtils.isReadable(pojo, name)) {
+				//if (!PropertyUtils.isReadable(pojo, name)) {
+					if (value != null && value instanceof String) {
+						String str = ((String) value).trim();
+						if (str.length() < 1) {
+							value = null;
+						} else if(str.charAt(0) == '{' || str.charAt(0) == '[') {
+							try {
+								value = getJsonReader(str.charAt(0) == '{' ? Map.class : List.class).readValue((String) value);
+							} catch (IOException ignored) {
+							}
+						}
+					}
+
 					if (value == null) {
 						((Sysprop) pojo).removeProperty(name);
 					} else {
 						((Sysprop) pojo).addProperty(name, value);
 					}
-				}
+				//}
 			}
 		}
 	}
