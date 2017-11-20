@@ -2,8 +2,21 @@
 <configuration>
     <appender name="ACCESS" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>combined</pattern>
+            <!-- <pattern>combined</pattern> -->
+            <pattern>%h %l %u %t "%r" %s %b "%i{Referer}" "%i{User-Agent}" %u %D%n</pattern>
         </encoder>
     </appender>
-    <appender-ref ref="ACCESS" />
+
+    <appender name="access-file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>access-log-%d{yyyyMMdd}.txt</fileNamePattern>
+            <maxHistory>90</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <!-- <pattern>combined</pattern> -->
+            <pattern>%h %l "%u" %t "%r" %s %b "%i{Referer}" "%i{User-Agent}" %D%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender-ref ref="access-file" />
 </configuration>

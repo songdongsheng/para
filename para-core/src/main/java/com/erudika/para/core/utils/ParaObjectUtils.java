@@ -242,6 +242,17 @@ public final class ParaObjectUtils {
 			for(Map.Entry<String, Object> entry: map.entrySet()) {
 				if (entry.getValue() instanceof Map) {
 					entry.setValue(getJsonWriterNoIdent().writeValueAsString(entry.getValue()));
+				} else if (entry.getValue() instanceof List) {
+					List list = (List) entry.getValue();
+					boolean hasComplexType = false;
+					for (Object object: list) {
+						if (object != null && (object instanceof Map || object instanceof List || !Utils.isBasicType(object.getClass()))) {
+							hasComplexType = true;
+						}
+					}
+					if (hasComplexType) {
+						entry.setValue(getJsonWriterNoIdent().writeValueAsString(entry.getValue()));
+					}
 				}
 			}
 		} catch (Exception ex) {

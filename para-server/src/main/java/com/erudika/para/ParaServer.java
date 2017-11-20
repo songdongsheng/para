@@ -32,6 +32,7 @@ import com.erudika.para.security.JWTRestfulAuthFilter;
 import com.erudika.para.security.SecurityModule;
 import com.erudika.para.storage.StorageModule;
 import com.erudika.para.utils.Config;
+import com.erudika.para.utils.JwtRequestLogImpl;
 import com.erudika.para.utils.filters.CORSFilter;
 import com.erudika.para.utils.filters.ErrorFilter;
 import com.erudika.para.utils.filters.GZipServletFilter;
@@ -177,12 +178,12 @@ public class ParaServer implements WebApplicationInitializer, Ordered {
 					}
 					RequestLogHandler reqLogs = new RequestLogHandler();
 					reqLogs.setServer(server);
-					RequestLogImpl rli = new RequestLogImpl();
+					RequestLogImpl rli = new JwtRequestLogImpl();
 					rli.setResource("/logback-access.xml");
 					rli.setQuiet(true);
 					rli.start();
 					reqLogs.setRequestLog(rli);
-					handlers.addHandler(reqLogs);
+					 handlers.addHandler(reqLogs);
 					server.setHandler(handlers);
 				}
 
