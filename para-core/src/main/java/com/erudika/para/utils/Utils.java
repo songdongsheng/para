@@ -19,6 +19,7 @@ package com.erudika.para.utils;
 
 import com.erudika.para.annotations.Email;
 import com.erudika.para.core.ParaObject;
+import com.erudika.para.core.utils.ParaObjectUtils;
 import com.samskivert.mustache.Mustache;
 import com.github.songdongsheng.identifier.Snowflake;
 import com.vladsch.flexmark.html.HtmlRenderer;
@@ -729,7 +730,7 @@ public final class Utils {
 	 * @return just the name in lowercase or an empty string if clazz is null
 	 */
 	public static String type(Class<? extends ParaObject> clazz) {
-		return (clazz == null) ? "" : clazz.getSimpleName().toLowerCase();
+		return ParaObjectUtils.toKey(clazz);
 	}
 
 	/////////////////////////////////////////////

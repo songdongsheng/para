@@ -439,7 +439,11 @@ public final class ParaObjectUtils {
 		return Collections.unmodifiableMap(CORE_CLASSES);
 	}
 
-	private static String toKey(Class<? extends ParaObject> coreClass) {
+	public static String toKey(Class<? extends ParaObject> coreClass) {
+		if (coreClass == null) {
+			return "";
+		}
+
 		String simpleName = coreClass.getSimpleName();
 		if (coreClass.getName().startsWith("cn.abrain")) {
 			char[] chars = simpleName.toCharArray();
