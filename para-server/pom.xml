@@ -308,25 +308,25 @@
 		<dependency>
 			<groupId>com.alibaba</groupId>
 			<artifactId>druid</artifactId>
-			<version>1.1.5</version>
+			<version>1.1.6</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.erudika</groupId>
 			<artifactId>para-search-elasticsearch</artifactId>
-			<version>1.25.7</version>
+			<version>1.26.0</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-			<version>23.4-jre</version>
+			<version>23.5-jre</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-to-slf4j</artifactId>
-			<version>2.9.1</version>
+			<version>2.10.0</version>
 		</dependency>
 
 		<dependency>
@@ -356,8 +356,9 @@
 		<dependency>
 			<groupId>org.xerial</groupId>
 			<artifactId>sqlite-jdbc</artifactId>
-			<version>3.20.1</version>
+			<version>3.21.0</version>
 		</dependency>
+
 		<dependency>
 			<groupId>cn.abrain.backend.api</groupId>
 			<artifactId>baas-entity</artifactId>

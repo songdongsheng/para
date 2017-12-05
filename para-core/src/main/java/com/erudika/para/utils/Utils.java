@@ -20,8 +20,9 @@ package com.erudika.para.utils;
 import com.erudika.para.annotations.Email;
 import com.erudika.para.core.ParaObject;
 import com.erudika.para.core.utils.ParaObjectUtils;
-import com.samskivert.mustache.Mustache;
 import com.github.songdongsheng.identifier.Snowflake;
+import com.github.songdongsheng.identifier.TSID80;
+import com.samskivert.mustache.Mustache;
 import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
 import java.io.IOException;
@@ -770,7 +771,7 @@ public final class Utils {
 	 * @return a long unique ID string of digits
 	 */
 	public static synchronized String getNewId() {
-		return SNOWFLAKE.next();
+		return TSID80.next();
 	}
 
 	private static long tilNextMillis(long lastTimestamp) {
