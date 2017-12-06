@@ -18,7 +18,9 @@
 package com.erudika.para.security;
 
 import com.erudika.para.core.App;
+import com.erudika.para.core.Sysprop;
 import com.erudika.para.core.User;
+import com.erudika.para.core.utils.CoreUtils;
 import com.erudika.para.rest.Signer;
 import com.erudika.para.utils.BufferedRequestWrapper;
 import com.erudika.para.utils.Config;
@@ -33,17 +35,21 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.ws.rs.core.HttpHeaders;
+
+import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -365,5 +371,40 @@ public final class SecurityUtils {
 		String recreatedSig = StringUtils.substringAfter(auth2, "Signature=");
 
 		return StringUtils.equals(givenSig, recreatedSig);
+	}
+
+	public static void setTenantInfo(User user, Sysprop mu) {
+		if (user == null) {
+			return;
+		}
+
+		try {
+			String activeTenantId = (String) PropertyUtils.getProperty(mu, "activeTenantId");
+			user.setActiveTenantId(activeTenantId);
+			List<String> roleIdList = (List<String>) PropertyUtils.getProperty(mu, "roleId");
+			if (roleIdList == null || roleIdList.isEmpty()) {
+				return;
+			}
+
+			user.setRoleId(roleIdList);
+		} catch (IllegalAccessException|InvocationTargetException|NoSuchMethodException e) {
+			logger.error("Read metaUser from user failed, user: {}", user, e);
+		}
+	}
+
+	public static void setTenantInfo(User user) {
+		if (user == null) {
+			return;
+		}
+
+		HashMap<String, String> map = new HashMap<>();
+		map.put("parentid", user.getId());
+		List<Sysprop> muList = CoreUtils.getInstance().getSearch().findTerms(user.getAppid(), "metaUser", map, true);
+		logger.debug("user: {}, metaUser: {}", user, muList);
+		if (muList == null || muList.isEmpty()) {
+			return;
+		}
+
+		setTenantInfo(user, muList.get(0));
 	}
 }

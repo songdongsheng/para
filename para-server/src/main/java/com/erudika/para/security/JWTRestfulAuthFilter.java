@@ -264,6 +264,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 					User user = Para.getDAO().read(app.getAppIdentifier(), userid);
 					if (user != null) {
 						// standard user JWT auth, restricted access through resource permissions
+						SecurityUtils.setTenantInfo(user);
 						return new JWTAuthentication(new AuthenticatedUserDetails(user)).withJWT(jwt).withApp(app);
 					} else {
 						// "super token" - subject is authenticated as app, full access

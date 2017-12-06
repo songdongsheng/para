@@ -27,6 +27,8 @@ import com.erudika.para.utils.Config;
 import com.erudika.para.utils.Pager;
 import com.erudika.para.utils.Utils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -71,6 +73,12 @@ public class User implements ParaObject {
 	@Stored @Locked private String tokenSecret;
 
 	private transient String password;
+
+	private transient List<String> roleId = new ArrayList<>();
+
+	private transient String activeTenantId = "00000000";
+
+	private transient List<String> adminTenantId;
 
 	/**
 	 * No-args constructor.
@@ -734,6 +742,41 @@ public class User implements ParaObject {
 				setPicture("https://www.gravatar.com/avatar?d=mm&size=400");
 			}
 		}
+	}
+
+	@JsonIgnore
+	public List<String> getRoleId() {
+		return Collections.unmodifiableList(roleId);
+	}
+
+	public void setRoleId(List<String> roleId) {
+		this.roleId = new ArrayList<>(roleId);
+		this.adminTenantId = new ArrayList<>(this.roleId.size());
+
+		for(String rid: this.roleId) {
+			if (StringUtils.startsWith(rid,"admin_")) {
+				this.adminTenantId.add(rid.substring("admin_".length()).trim());
+			}
+		}
+	}
+
+	@JsonIgnore
+	public String getActiveTenantId() {
+		return activeTenantId;
+	}
+
+	public void setActiveTenantId(String activeTenantId) {
+		this.activeTenantId = activeTenantId;
+	}
+
+	@JsonIgnore
+	public boolean isTenantAdmin() {
+		return adminTenantId != null && adminTenantId.indexOf(activeTenantId) >= 0;
+	}
+
+	@JsonIgnore
+	public boolean isTenantAdmin(String tenantId) {
+		return adminTenantId != null && adminTenantId.indexOf(tenantId) >= 0;
 	}
 
 	/**

@@ -251,7 +251,17 @@ public final class Api1 extends ResourceConfig {
 				String method = pathParam("method", ctx);
 				method = StringUtils.isBlank(method) ? params.getFirst("method") : method;
 				if ("newid".equals(method)) {
-					return Response.ok(Utils.getNewId(), MediaType.TEXT_PLAIN_TYPE).build();
+					String size = queryParam("size", ctx);
+                    int n = StringUtils.isBlank(size) ? 1 : Math.min(Math.max(Integer.parseInt(size), 1), 1000);
+					if (n < 2) {
+						return Response.ok(Utils.getNewId(), MediaType.TEXT_PLAIN_TYPE).build();
+					}
+
+					String[] ids = new String[n];
+					for(int i = 0; i < n; i++) {
+						ids[i] = Utils.getNewId();
+					}
+					return Response.ok(ids, MediaType.APPLICATION_JSON_TYPE).build();
 				} else if ("timestamp".equals(method)) {
 					return Response.ok(Utils.timestamp(), MediaType.TEXT_PLAIN_TYPE).build();
 				} else if ("formatdate".equals(method)) {

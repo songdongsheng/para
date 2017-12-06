@@ -19,12 +19,16 @@ package com.erudika.para.security.filters;
 
 import com.erudika.para.Para;
 import com.erudika.para.core.App;
+import com.erudika.para.core.Sysprop;
 import com.erudika.para.core.User;
+import com.erudika.para.core.utils.CoreUtils;
 import com.erudika.para.security.AuthenticatedUserDetails;
 import com.erudika.para.security.SecurityUtils;
 import com.erudika.para.security.UserAuthentication;
 import com.erudika.para.utils.Config;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -89,6 +93,19 @@ public class PasswordAuthFilter extends AbstractAuthenticationProcessingFilter {
 		return SecurityUtils.checkIfActive(userAuth, user, true);
 	}
 
+	private static boolean isPhone(String value) {
+		if (value.length() != 11 || value.charAt(0) != '1') {
+			return false;
+		}
+
+		for(int i = 1; i < 11; i++) {
+			if (!Character.isDigit(value.charAt(0))) {
+				return false;
+			}
+		}
+
+		return true;
+	}
 
 	/**
 	 * Authenticates or creates a {@link User} using an email and password.
@@ -112,6 +129,41 @@ public class PasswordAuthFilter extends AbstractAuthenticationProcessingFilter {
 			u.setIdentifier(email);
 			u.setPassword(pass);
 			u.setEmail(email);
+
+			// login by phone or loginId
+			if (StringUtils.isNoneBlank(email) && StringUtils.indexOf(email, '@') < 0) {
+				email = email.trim();
+				HashMap<String, String> map = new HashMap<>();
+				if (isPhone(email)) {
+					map.put("phone", email);
+				} else {
+					map.put("loginId", email);
+				}
+
+				List<Sysprop> muList = CoreUtils.getInstance().getSearch().findTerms(app.getAppid(), "metaUser", map, true);
+				if (muList != null && !muList.isEmpty()) {
+					Sysprop mu = muList.get(0);
+					map.clear();
+					map.put("id", mu.getParentid());
+					List<User> userList = CoreUtils.getInstance().getSearch().findTerms(app.getAppid(), "user", map, true);
+					if (userList != null && !userList.isEmpty()) {
+						user = userList.get(0);
+						u.setIdentifier(user.getIdentifier());
+						u.setEmail(user.getEmail());
+						if (User.passwordMatches(u)) {
+							SecurityUtils.setTenantInfo(user, mu);
+							userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
+							return SecurityUtils.checkIfActive(userAuth, user, false);
+						}
+						logger.error("User '" + email + "' password not match");
+						return null;
+					}
+				}
+
+				logger.error("User '" + email + "' not found");
+				return null;
+			}
+
 			// NOTE TO SELF:
 			// do not overwrite 'u' here - overwrites the password hash!
 			user = User.readUserForIdentifier(u);
@@ -126,9 +178,11 @@ public class PasswordAuthFilter extends AbstractAuthenticationProcessingFilter {
 				user.setPassword(pass);
 				if (user.create() != null) {
 					// allow temporary first-time login without verifying email address
+					SecurityUtils.setTenantInfo(user);
 					userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
 				}
 			} else if (User.passwordMatches(u)) {
+				SecurityUtils.setTenantInfo(user);
 				userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
 			}
 		}

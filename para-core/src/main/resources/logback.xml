@@ -18,12 +18,7 @@
 		</encoder>
 	</appender>
 
-	<logger name="cn.abrain" level="debug" additivity="false">
-		<appender-ref ref="console"/>
-		<appender-ref ref="file"/>
-	</logger>
-
-	<logger name="ACCESS_LOG" level="debug" additivity="false">
+	<logger name="cn.abrain" level="info" additivity="false">
 		<appender-ref ref="console"/>
 		<appender-ref ref="file"/>
 	</logger>
