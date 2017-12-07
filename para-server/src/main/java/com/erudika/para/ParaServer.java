@@ -38,6 +38,7 @@ import com.erudika.para.utils.filters.ErrorFilter;
 import com.erudika.para.utils.filters.GZipServletFilter;
 import com.google.inject.Module;
 import javax.annotation.PreDestroy;
+import javax.servlet.Servlet;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletException;
@@ -73,6 +74,8 @@ import org.springframework.core.Ordered;
 import org.springframework.web.WebApplicationInitializer;
 import org.springframework.web.context.ContextLoaderListener;
 import org.springframework.web.context.WebApplicationContext;
+
+import java.util.ServiceLoader;
 
 /**
  * Para modules are initialized and destroyed from here.
@@ -208,6 +211,17 @@ public class ParaServer implements WebApplicationInitializer, Ordered {
 		jef.setPort(NumberUtils.toInt(System.getProperty("server.port"), defaultPort));
 		logger.info("Listening on port {}...", jef.getPort());
 		return jef;
+	}
+
+	@Bean
+	public ServletRegistrationBean UserRegistrationServletRegistrationBean() {
+		ServiceLoader<Servlet> loader = ServiceLoader.load(Servlet.class, Para.getParaClassLoader());
+		for (Servlet servlet : loader) {
+			if (servlet != null && servlet.getClass().getName().equals("cn.abrain.api.usermgr.UserRegistrationServlet")) {
+				return new ServletRegistrationBean(servlet, "/register/*");
+			}
+		}
+		return null;
 	}
 
 	/**
