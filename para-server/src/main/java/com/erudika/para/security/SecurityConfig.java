@@ -54,6 +54,7 @@ import org.springframework.security.web.authentication.rememberme.RememberMeAuth
 import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.firewall.DefaultHttpFirewall;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 /**
  * Programmatic configuration for Spring Security.
@@ -130,7 +131,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	 */
 	@Override
 	public void configure(WebSecurity web) throws Exception {
-		web.ignoring().requestMatchers(IgnoredRequestMatcher.INSTANCE);
+		web.ignoring().requestMatchers(IgnoredRequestMatcher.INSTANCE, new AntPathRequestMatcher("/register/**"));
 		DefaultHttpFirewall firewall = new DefaultHttpFirewall();
 		firewall.setAllowUrlEncodedSlash(true);
 		web.httpFirewall(firewall);
