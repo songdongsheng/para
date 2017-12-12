@@ -209,6 +209,7 @@ public final class Api1 extends ResourceConfig {
 				}
 			});
 			registerResources(custom.build());
+			logger.info("register handler: {}, relativePath: {}", handler, handler.getRelativePath());
 		}
 	}
 

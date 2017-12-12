@@ -3,7 +3,7 @@
     <appender name="ACCESS" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <!-- <pattern>combined</pattern> -->
-            <pattern>%h %l %u %t "%r" %s %b "%i{Referer}" "%i{User-Agent}" %u %D%n</pattern>
+            <pattern>"%t{yyyy-MM-dd HH:mm:ss.SSS}" "%u" %h "%i{Host}" "%r" %s %b "%i{Referer}" "%i{User-Agent}" %D%n</pattern>
         </encoder>
     </appender>
 
@@ -14,7 +14,7 @@
         </rollingPolicy>
         <encoder>
             <!-- <pattern>combined</pattern> -->
-            <pattern>%h %l "%u" %t "%r" %s %b "%i{Referer}" "%i{User-Agent}" %D%n</pattern>
+            <pattern>"%t{yyyy-MM-dd HH:mm:ss.SSS}" "%u" %h "%i{Host}" "%r" %s %b "%i{Referer}" "%i{User-Agent}" %D%n</pattern>
         </encoder>
     </appender>
 
