@@ -132,6 +132,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	@Override
 	public void configure(WebSecurity web) throws Exception {
 		web.ignoring().requestMatchers(IgnoredRequestMatcher.INSTANCE, new AntPathRequestMatcher("/register/**"));
+		web.ignoring().requestMatchers(IgnoredRequestMatcher.INSTANCE, new AntPathRequestMatcher("/reset/**"));
+		web.ignoring().requestMatchers(IgnoredRequestMatcher.INSTANCE, new AntPathRequestMatcher("/check/**"));
 		DefaultHttpFirewall firewall = new DefaultHttpFirewall();
 		firewall.setAllowUrlEncodedSlash(true);
 		web.httpFirewall(firewall);

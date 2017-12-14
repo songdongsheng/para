@@ -223,6 +223,26 @@ public class ParaServer implements WebApplicationInitializer, Ordered {
 		}
 		return null;
 	}
+	@Bean
+	public ServletRegistrationBean UserResetServletRegistrationBean() {
+		ServiceLoader<Servlet> loader = ServiceLoader.load(Servlet.class, Para.getParaClassLoader());
+		for (Servlet servlet : loader) {
+			if (servlet != null && servlet.getClass().getName().equals("cn.abrain.api.usermgr.UserReSetServlet")) {
+				return new ServletRegistrationBean(servlet, "/reset/*");
+			}
+		}
+		return null;
+	}
+	@Bean
+	public ServletRegistrationBean UserCheckServletRegistrationBean() {
+		ServiceLoader<Servlet> loader = ServiceLoader.load(Servlet.class, Para.getParaClassLoader());
+		for (Servlet servlet : loader) {
+			if (servlet != null && servlet.getClass().getName().equals("cn.abrain.api.usermgr.UserCheckServlet")) {
+				return new ServletRegistrationBean(servlet, "/check/*");
+			}
+		}
+		return null;
+	}
 
 	/**
 	 * Called before shutdown.
