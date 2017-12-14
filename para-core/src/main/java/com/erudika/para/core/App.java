@@ -96,6 +96,7 @@ public class App implements ParaObject, Serializable {
 	@Stored @Locked private String parentid;
 	@Stored @Locked private String creatorid;
 	@Stored private Long updated;
+	@Stored private String updaterid;
 	@Stored private String name;
 	@Stored private List<String> tags;
 	@Stored private Integer votes;
@@ -1053,6 +1054,14 @@ public class App implements ParaObject, Serializable {
 	public void setUpdated(Long updated) {
 		this.updated = updated;
 	}
+
+    public String getUpdaterid() {
+        return updaterid;
+    }
+
+    public void setUpdaterid(String updaterid) {
+        this.updaterid = updaterid;
+    }
 
 	@Override
 	public void update() {
