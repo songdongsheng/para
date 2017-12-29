@@ -3,7 +3,7 @@
     <appender name="ACCESS" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <!-- <pattern>combined</pattern> -->
-            <pattern>"%t{yyyy-MM-dd HH:mm:ss.SSS}" "%u" %h "%i{Host}" "%r" %s %b "%i{Referer}" "%i{User-Agent}" %D%n</pattern>
+            <pattern>"%t{yyyy-MM-dd HH:mm:ss.SSS}" "%u" "%i{tenantId}" %h "%i{Host}" "%r" %s %b "%i{Referer}" "%i{User-Agent}" %D%n</pattern>
         </encoder>
     </appender>
 
@@ -14,9 +14,13 @@
         </rollingPolicy>
         <encoder>
             <!-- <pattern>combined</pattern> -->
-            <pattern>"%t{yyyy-MM-dd HH:mm:ss.SSS}" "%u" %h "%i{Host}" "%r" %s %b "%i{Referer}" "%i{User-Agent}" %D%n</pattern>
+            <pattern>"%t{yyyy-MM-dd HH:mm:ss.SSS}" "%u" "%i{tenantId}" %h "%i{Host}" "%r" %s %b "%i{Referer}" "%i{User-Agent}" %D%n</pattern>
         </encoder>
     </appender>
 
+    <appender name="DB" class="com.erudika.para.utils.DBLoggerAppender">
+    </appender>
+
     <appender-ref ref="access-file" />
+    <appender-ref ref="DB" />
 </configuration>

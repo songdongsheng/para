@@ -5,6 +5,9 @@ import ch.qos.logback.access.pattern.AccessConverter;
 import ch.qos.logback.access.servlet.Util;
 import ch.qos.logback.access.spi.IAccessEvent;
 import ch.qos.logback.access.spi.ServerAdapter;
+import com.erudika.para.Para;
+import com.erudika.para.core.App;
+import com.erudika.para.core.User;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpHeaders;
@@ -13,6 +16,8 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -47,6 +52,7 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
     String responseContent;
     String sessionID;
     long elapsedTime;
+    String tenantId;
 
     Map<String, String> requestHeaderMap;
     Map<String, String[]> requestParameterMap;
@@ -72,6 +78,7 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
         this.serverAdapter = adapter;
         this.elapsedTime = calculateElapsedTime();
         this.remoteUser = tryParseJwt(httpRequest, httpResponse);
+        this.tenantId = activeTenantId(httpRequest, httpResponse);
     }
 
     private String tryParseJwt(HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
@@ -96,6 +103,35 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
         } catch (ParseException ignored) {
         }
 
+        return null;
+    }
+
+    private String activeTenantId(HttpServletRequest httpRequest, HttpServletResponse httpResponse){
+        String token = httpResponse.getHeader(HttpHeaders.AUTHORIZATION);
+        if (StringUtils.isBlank(token)) {
+            token = httpRequest.getHeader(HttpHeaders.AUTHORIZATION);
+        }
+        if (StringUtils.isBlank(token)) {
+            token = httpRequest.getParameter(HttpHeaders.AUTHORIZATION);
+        }
+        if (StringUtils.isBlank(token)) {
+            return null;
+        }
+        try {
+            SignedJWT jwt = SignedJWT.parse(token.substring(6).trim());
+            String userid = jwt.getJWTClaimsSet().getSubject();
+            String appid = (String) jwt.getJWTClaimsSet().getClaim(Config._APPID);
+            App app = Para.getDAO().read(App.id(appid));
+            if (app != null) {
+                User user = Para.getDAO().read(app.getAppIdentifier(), userid);
+                if (user != null && StringUtils.isNotBlank(user.getActiveTenantId())) {
+                    getRequestHeaderMap();
+                    requestHeaderMap.put("tenantId", user.getActiveTenantId());
+                    return user.getActiveTenantId();
+                }
+            }
+        } catch (ParseException ignored) {
+        }
         return null;
     }
 
@@ -477,6 +513,10 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
         return getTimeStamp() - serverAdapter.getRequestTimestamp();
     }
 
+    public long getRequestTime(){
+        return serverAdapter.getRequestTimestamp();
+    }
+
     public String getRequestContent() {
         if (requestContent != null) {
             return requestContent;
@@ -583,6 +623,10 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
     public List<String> getResponseHeaderNameList() {
         buildResponseHeaderMap();
         return new ArrayList<String>(responseHeaderMap.keySet());
+    }
+
+    public String getTenantId() {
+        return tenantId;
     }
 
     public void prepareForDeferredProcessing() {
