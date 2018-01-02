@@ -204,6 +204,7 @@ public final class SecurityUtils {
 				if (user != null) {
 					claimsSet.subject(user.getId());
 					claimsSet.claim("uid", user.getIdentifier());
+					claimsSet.claim("tid", user.getActiveTenantId());
 					userSecret = user.getTokenSecret();
 				}
 				JWSSigner signer = new MACSigner(app.getSecret() + userSecret);

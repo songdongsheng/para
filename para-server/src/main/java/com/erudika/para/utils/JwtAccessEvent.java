@@ -5,9 +5,6 @@ import ch.qos.logback.access.pattern.AccessConverter;
 import ch.qos.logback.access.servlet.Util;
 import ch.qos.logback.access.spi.IAccessEvent;
 import ch.qos.logback.access.spi.ServerAdapter;
-import com.erudika.para.Para;
-import com.erudika.para.core.App;
-import com.erudika.para.core.User;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpHeaders;
@@ -16,8 +13,6 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -81,7 +76,7 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
         this.tenantId = activeTenantId(httpRequest, httpResponse);
     }
 
-    private String tryParseJwt(HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+    private SignedJWT getJwt(HttpServletRequest httpRequest, HttpServletResponse httpResponse) throws ParseException {
         String token = httpResponse.getHeader(HttpHeaders.AUTHORIZATION);
         if (StringUtils.isBlank(token)) {
             token = httpRequest.getHeader(HttpHeaders.AUTHORIZATION);
@@ -89,13 +84,15 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
         if (StringUtils.isBlank(token)) {
             token = httpRequest.getParameter(HttpHeaders.AUTHORIZATION);
         }
-
         if (StringUtils.isBlank(token)) {
             return null;
         }
+        return SignedJWT.parse(token.substring(6).trim());
+    }
 
+    private String tryParseJwt(HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         try {
-            SignedJWT jwt = SignedJWT.parse(token.substring(6).trim());
+            SignedJWT jwt = getJwt(httpRequest, httpResponse);
             Object uid = jwt.getJWTClaimsSet().getClaim("uid");
             if (uid != null) {
                 return (String) uid;
@@ -107,28 +104,13 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
     }
 
     private String activeTenantId(HttpServletRequest httpRequest, HttpServletResponse httpResponse){
-        String token = httpResponse.getHeader(HttpHeaders.AUTHORIZATION);
-        if (StringUtils.isBlank(token)) {
-            token = httpRequest.getHeader(HttpHeaders.AUTHORIZATION);
-        }
-        if (StringUtils.isBlank(token)) {
-            token = httpRequest.getParameter(HttpHeaders.AUTHORIZATION);
-        }
-        if (StringUtils.isBlank(token)) {
-            return null;
-        }
         try {
-            SignedJWT jwt = SignedJWT.parse(token.substring(6).trim());
-            String userid = jwt.getJWTClaimsSet().getSubject();
-            String appid = (String) jwt.getJWTClaimsSet().getClaim(Config._APPID);
-            App app = Para.getDAO().read(App.id(appid));
-            if (app != null) {
-                User user = Para.getDAO().read(app.getAppIdentifier(), userid);
-                if (user != null && StringUtils.isNotBlank(user.getActiveTenantId())) {
-                    getRequestHeaderMap();
-                    requestHeaderMap.put("tenantId", user.getActiveTenantId());
-                    return user.getActiveTenantId();
-                }
+            SignedJWT jwt = getJwt(httpRequest, httpResponse);
+            Object tenantid = jwt.getJWTClaimsSet().getClaim("tid");
+            if (tenantid != null) {
+                getRequestHeaderMap();
+                requestHeaderMap.put("tenantId", (String) tenantid);
+                return (String) tenantid;
             }
         } catch (ParseException ignored) {
         }
@@ -347,7 +329,7 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
     public Enumeration<String> getRequestHeaderNames() {
         // post-serialization
         if (httpRequest == null) {
-            Vector<String> list = new Vector<String>(getRequestHeaderMap().keySet());
+            Vector<String> list = new Vector<>(getRequestHeaderMap().keySet());
             return list.elements();
         }
         return httpRequest.getHeaderNames();
@@ -364,7 +346,7 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
     public void buildRequestHeaderMap() {
         // according to RFC 2616 header names are case insensitive
         // latest versions of Tomcat return header names in lower-case
-        requestHeaderMap = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
+        requestHeaderMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         Enumeration<String> e = httpRequest.getHeaderNames();
         if (e == null) {
             return;
@@ -376,7 +358,7 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
     }
 
     public void buildRequestParameterMap() {
-        requestParameterMap = new HashMap<String, String[]>();
+        requestParameterMap = new HashMap<>();
         Enumeration<String> e = httpRequest.getParameterNames();
         if (e == null) {
             return;
@@ -420,7 +402,7 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
             return;
         }
 
-        attributeMap = new HashMap<String, Object>();
+        attributeMap = new HashMap<>();
 
         Enumeration<String> names = httpRequest.getAttributeNames();
         while (names.hasMoreElements()) {
@@ -622,7 +604,7 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
 
     public List<String> getResponseHeaderNameList() {
         buildResponseHeaderMap();
-        return new ArrayList<String>(responseHeaderMap.keySet());
+        return new ArrayList<>(responseHeaderMap.keySet());
     }
 
     public String getTenantId() {
