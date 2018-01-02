@@ -5,6 +5,7 @@ import ch.qos.logback.access.pattern.AccessConverter;
 import ch.qos.logback.access.servlet.Util;
 import ch.qos.logback.access.spi.IAccessEvent;
 import ch.qos.logback.access.spi.ServerAdapter;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpHeaders;
@@ -72,8 +73,7 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
         this.timeStamp = System.currentTimeMillis();
         this.serverAdapter = adapter;
         this.elapsedTime = calculateElapsedTime();
-        this.remoteUser = tryParseJwt(httpRequest, httpResponse);
-        this.tenantId = activeTenantId(httpRequest, httpResponse);
+        tryParseJwt(httpRequest, httpResponse);
     }
 
     private SignedJWT getJwt(HttpServletRequest httpRequest, HttpServletResponse httpResponse) throws ParseException {
@@ -90,31 +90,25 @@ public class JwtAccessEvent implements Serializable, IAccessEvent {
         return SignedJWT.parse(token.substring(6).trim());
     }
 
-    private String tryParseJwt(HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+    private void tryParseJwt(HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         try {
             SignedJWT jwt = getJwt(httpRequest, httpResponse);
-            Object uid = jwt.getJWTClaimsSet().getClaim("uid");
-            if (uid != null) {
-                return (String) uid;
+            if (jwt == null) {
+                return ;
             }
-        } catch (ParseException ignored) {
-        }
-
-        return null;
-    }
-
-    private String activeTenantId(HttpServletRequest httpRequest, HttpServletResponse httpResponse){
-        try {
-            SignedJWT jwt = getJwt(httpRequest, httpResponse);
-            Object tenantid = jwt.getJWTClaimsSet().getClaim("tid");
+            JWTClaimsSet claims = jwt.getJWTClaimsSet();
+            Object uid = claims.getClaim("uid");
+            if (uid != null) {
+                this.remoteUser = (String) uid;
+            }
+            Object tenantid = claims.getClaim("tid");
             if (tenantid != null) {
                 getRequestHeaderMap();
                 requestHeaderMap.put("tenantId", (String) tenantid);
-                return (String) tenantid;
+                this.tenantId = (String) tenantid;
             }
         } catch (ParseException ignored) {
         }
-        return null;
     }
 
     /**
