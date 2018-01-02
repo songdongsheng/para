@@ -9,8 +9,6 @@ import java.sql.*;
 
 public class DBLoggerAppender extends UnsynchronizedAppenderBase<IAccessEvent> {
 
-    private static final String insertSQL;
-
     private static final DruidDataSource dataSource;
 
     static {
@@ -28,35 +26,9 @@ public class DBLoggerAppender extends UnsynchronizedAppenderBase<IAccessEvent> {
         }
     }
 
-    static {
-        StringBuilder sql = new StringBuilder();
-        sql.append("INSERT INTO META_API_LOG (");
-        sql.append("ID, ");
-        sql.append("APP_ID, ");
-        sql.append("TENANT_ID, ");
-        sql.append("ACCESS_TIME, ");
-        sql.append("REMOTE_USER, ");
-        sql.append("REMOTE_HOST, ");
-        sql.append("REQUEST_HOST, ");
-        sql.append("REQUEST_METHOD, ");
-        sql.append("REQUEST_PATH, ");
-        sql.append("API_IDENTIFIER, ");
-        sql.append("QUERY_STRING, ");
-        sql.append("REQUEST_REFERER, ");
-        sql.append("USER_AGENT, ");
-        sql.append("STATUS_CODE, ");
-        sql.append("PROCESS_TIME, ");
-        sql.append("REQUEST_CONTENT_LENGTH, ");
-        sql.append("REQUEST_CONTENT, ");
-        sql.append("RESPONSE_CONTENT_LENGTH, ");
-        sql.append("RESPONSE_CONTENT) ");
-        sql.append(" VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        insertSQL = sql.toString();
-    }
-
-
     @Override
     protected void append(IAccessEvent event) {
+        String insertSQL = "INSERT INTO META_API_LOG (ID, APP_ID, TENANT_ID, ACCESS_TIME, REMOTE_USER, REMOTE_HOST, REQUEST_HOST, REQUEST_METHOD, REQUEST_PATH, API_IDENTIFIER, QUERY_STRING, REQUEST_REFERER, USER_AGENT, STATUS_CODE, PROCESS_TIME, REQUEST_CONTENT_LENGTH, REQUEST_CONTENT, RESPONSE_CONTENT_LENGTH, RESPONSE_CONTENT) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection cn = getConnection()) {
             cn.setAutoCommit(true);
             try (PreparedStatement ps = cn.prepareStatement(insertSQL)) {
@@ -88,12 +60,12 @@ public class DBLoggerAppender extends UnsynchronizedAppenderBase<IAccessEvent> {
             stmt.setString(8, jwt.getMethod());
             stmt.setString(9, jwt.getRequestURI());
             stmt.setString(10, getApiName(jwt.getRequestURI()));
-            stmt.setString(11, jwt.getQueryString());
+            stmt.setString(11, jwt.getQueryString().replace("?", ""));
             stmt.setString(12, jwt.getRequestHeader("Referer"));
             stmt.setString(13, jwt.getRequestHeader("User-Agent"));
             stmt.setInt(14, jwt.getResponse().getStatus());
             stmt.setLong(15, jwt.getElapsedTime());
-            stmt.setLong(16, jwt.getRequest().getContentLength());
+            stmt.setLong(16, jwt.getRequest().getContentLength() < 0 ? 0 : jwt.getRequest().getContentLength());
             stmt.setString(17, jwt.getRequestContent());
             stmt.setLong(18, jwt.getContentLength());
             stmt.setString(19, jwt.getResponseContent());
