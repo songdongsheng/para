@@ -55,6 +55,7 @@ public class Sysprop implements ParaObject, Serializable {
 	@Stored private Boolean stored;
 	@Stored private Boolean indexed;
 	@Stored private Boolean cached;
+	@Stored private boolean active = true;
 
 	@Stored private Map<String, Object> properties;
 
@@ -230,6 +231,14 @@ public class Sysprop implements ParaObject, Serializable {
 	@Override
 	public void setCached(Boolean cached) {
 		this.cached = cached;
+	}
+
+	public boolean isActive() {
+		return active;
+	}
+
+	public void setActive(boolean active) {
+		this.active = active;
 	}
 
 	@Override
