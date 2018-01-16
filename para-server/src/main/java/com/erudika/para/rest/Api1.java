@@ -718,6 +718,7 @@ public final class Api1 extends ResourceConfig {
 			public Response apply(ContainerRequestContext ctx) {
 				App app = (a != null) ? a : getPrincipalApp();
 				return getCreateResponse(app, type, ctx.getEntityStream());
+//				return Response.status(Response.Status.BAD_REQUEST.getStatusCode()).entity("{\"message\":\"方法已经无效，请调用/v1/abrain/bo/....相关的接口\"}").build();
 			}
 		};
 	}
@@ -756,6 +757,7 @@ public final class Api1 extends ResourceConfig {
 				// partial update - equivalent to PATCH method
 				return getUpdateResponse(app, getDAO().read(app.getAppIdentifier(), obj.getId()),
 						ctx.getEntityStream());
+//				return Response.status(Response.Status.BAD_REQUEST.getStatusCode()).entity("{\"message\":\"方法已经无效，请调用/v1/abrain/bo/....相关的接口\"}").build();
 			}
 		};
 	}
@@ -771,6 +773,7 @@ public final class Api1 extends ResourceConfig {
 				// full update - equivalent to PUT method
 				App app = (a != null) ? a : getPrincipalApp();
 				return getOverwriteResponse(app, pathParam(Config._ID, ctx), type, ctx.getEntityStream());
+//				return Response.status(Response.Status.BAD_REQUEST.getStatusCode(), "方法已经无效，请调用/v1/abrain/bo/....相关的接口").build();
 			}
 		};
 	}

@@ -25,6 +25,7 @@ import com.erudika.para.utils.Config;
 import com.erudika.para.utils.Utils;
 import static com.erudika.para.utils.Utils.getAllDeclaredFields;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
@@ -233,6 +234,10 @@ public final class ParaObjectUtils {
 							if (!Utils.isBasicType(field.getType()) && flattenNestedObjectsToString) {
 								value = getJsonWriterNoIdent().writeValueAsString(value);
 							}
+							JsonProperty annotation = field.getAnnotation(JsonProperty.class);
+							if(annotation!=null){
+								name = annotation.value();
+							}
 							map.put(name, value);
 						}
 					}
@@ -300,7 +305,12 @@ public final class ParaObjectUtils {
 			for (Field field : fields) {
 				boolean dontSkip = ((filter == null) ? true : !field.isAnnotationPresent(filter));
 				String name = field.getName();
-				Object value = data.get(name);
+				JsonProperty annotation = field.getAnnotation(JsonProperty.class);
+				String jsonName = name;
+				if(annotation!=null){
+					jsonName = annotation.value();
+				}
+				Object value = data.get(jsonName);
 				if (field.isAnnotationPresent(Stored.class) && dontSkip) {
 					// try to read a default value from the bean if any
 					if (value == null && PropertyUtils.isReadable(pojo, name)) {
@@ -314,7 +324,7 @@ public final class ParaObjectUtils {
 					field.setAccessible(true);
 					BeanUtils.setProperty(pojo, name, value);
 				}
-				props.remove(name);
+				props.remove(jsonName);
 			}
 			// handle unknown (user-defined) fields
 			setUserDefinedProperties(pojo, props);
@@ -445,7 +455,18 @@ public final class ParaObjectUtils {
 		}
 
 		String simpleName = coreClass.getSimpleName();
-		if (coreClass.getName().startsWith("cn.abrain")) {
+		if(coreClass.getName().startsWith("cn.abrain.baas.rbac.entity.ldc")){
+			char[] chars = simpleName.toCharArray();
+			StringBuffer sb = new StringBuffer();
+			for (char c : chars) {
+				if(Character.isUpperCase(c)){
+					sb.append("_").append(c);
+				}else{
+					sb.append(Character.toUpperCase(c));
+				}
+			}
+			return sb.substring(1, sb.length());
+		}else if (coreClass.getName().startsWith("cn.abrain")) {
 			char[] chars = simpleName.toCharArray();
 			chars[0] = Character.toLowerCase(chars[0]);
 			return new String(chars);
@@ -453,7 +474,7 @@ public final class ParaObjectUtils {
 			return simpleName.toLowerCase();
 		}
 	}
-
+	
 	/**
 	 * Helper class that lists all classes contained in a given package.
 	 */
