@@ -255,10 +255,9 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 	}
 
 	private Object readFromCacheOperation(String appid, Object[] args, MethodInvocation mi) throws Throwable {
-		Object result = null;
 		String getMeId = (args != null && args.length > 1) ? (String) args[1] : null;
-		if (cache.contains(appid, getMeId)) {
-			result = cache.get(appid, getMeId);
+        Object result = cache.get(appid, getMeId);
+        if (result != null) {
 			logger.debug("{}: Cache hit: {}->{}", getClass().getSimpleName(), appid, getMeId);
 		} else if (getMeId != null) {
 			result = mi.proceed();
