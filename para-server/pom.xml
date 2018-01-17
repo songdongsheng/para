@@ -362,9 +362,8 @@
 		<dependency>
 			<groupId>org.xerial</groupId>
 			<artifactId>sqlite-jdbc</artifactId>
-			<version>3.21.0</version>
+			<version>3.21.0.1</version>
 		</dependency>
-
 		<dependency>
 			<groupId>cn.abrain.backend.api</groupId>
 			<artifactId>baas-entity</artifactId>
@@ -376,25 +375,9 @@
 			<version>2.9.0</version>
 		</dependency>
 		<dependency>
-			<groupId>biz.paluch.redis</groupId>
-			<artifactId>lettuce</artifactId>
-			<version>4.4.2.Final</version>
-			<classifier>shaded</classifier>
-		</dependency>
-		<dependency>
 		  <groupId>com.datastax.cassandra</groupId>
 		  <artifactId>cassandra-driver-core</artifactId>
-		  <version>3.3.0</version>
-		</dependency>
-		<dependency>
-		  <groupId>com.datastax.cassandra</groupId>
-		  <artifactId>cassandra-driver-mapping</artifactId>
-		  <version>3.3.0</version>
-		</dependency>
-		<dependency>
-		  <groupId>com.datastax.cassandra</groupId>
-		  <artifactId>cassandra-driver-extras</artifactId>
-		  <version>3.3.0</version>
+		  <version>3.3.2</version>
 		</dependency>
 	</dependencies>
 
