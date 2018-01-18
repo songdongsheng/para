@@ -205,16 +205,18 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 		Object result = null;
 		if (addMe != null && errors.length == 0) {
 			AOPUtils.checkAndFixType(addMe);
-			if (addMe.getStored()) {
-				result = mi.proceed();
-			}
 			if (addMe.getIndexed()) {
 				search.index(appid, addMe);
 				logger.debug("{}: Indexed {}->{}", getClass().getSimpleName(), appid, addMe.getId());
 			}
+            if (addMe.getStored()) {
+                result = mi.proceed();
+            }
 		} else {
+            String str = String.join("; ", errors);
 			logger.warn("{}: Invalid object {}->{} errors: [{}]. Changes weren't persisted.",
-					getClass().getSimpleName(), appid, addMe, String.join("; ", errors));
+					getClass().getSimpleName(), appid, addMe, str);
+            throw new RuntimeException(str);
 		}
 		return result;
 	}
