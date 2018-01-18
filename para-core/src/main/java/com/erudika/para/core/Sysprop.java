@@ -49,7 +49,7 @@ public class Sysprop implements ParaObject, Serializable {
 	@Stored @Locked private String creatorid;
 	@Stored private Long updated;
 	@Stored private String updaterid;
-	@Stored private String name;
+	@Stored private String name = "n/a";
 	@Stored private List<String> tags;
 	@Stored private Integer votes;
 	@Stored private Boolean stored;
@@ -73,6 +73,7 @@ public class Sysprop implements ParaObject, Serializable {
 	public Sysprop(String id) {
 		setId(id);
 		setName(getName());
+		addProperty("tenantId", "00000000");
 	}
 
 	/**

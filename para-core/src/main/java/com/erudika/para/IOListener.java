@@ -37,6 +37,6 @@ public interface IOListener {
 	 * @param method the {@code DAO} method which was invoked before this
 	 * @param result the result of the IO operation
 	 */
-	void onPostInvoke(Method method, Object result);
+	void onPostInvoke(Method method, Object[] args, Object result);
 
 }

@@ -138,7 +138,7 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 		}
 
 		for (IOListener ioListener : ioListeners) {
-			ioListener.onPostInvoke(superMethod, result);
+			ioListener.onPostInvoke(superMethod, args, result);
 			logger.debug("Executed {}.onPostInvoke().", ioListener.getClass().getName());
 		}
 
@@ -207,7 +207,6 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 			AOPUtils.checkAndFixType(addMe);
 			if (addMe.getIndexed()) {
 				search.index(appid, addMe);
-				logger.debug("{}: Indexed {}->{}", getClass().getSimpleName(), appid, addMe.getId());
 			}
             if (addMe.getStored()) {
                 result = mi.proceed();
@@ -226,8 +225,6 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 		ParaObject removeMe = AOPUtils.getArgOfParaObject(args);
 		AOPUtils.checkAndFixType(removeMe);
 		search.unindex(appid, removeMe); // remove from index even if "isIndexed = false"
-		logger.debug("{}: Unindexed {}->{}", getClass().getSimpleName(), appid,
-				(removeMe == null) ? null : removeMe.getId());
 		return result;
 	}
 
@@ -243,7 +240,6 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 		if (addUs != null) {
 			addUs.addAll(removedObjects); // don't delete!
 		}
-		logger.debug("{}: Indexed all {}->{}", getClass().getSimpleName(), appid, indexUs.size());
 		return result;
 	}
 
@@ -251,21 +247,16 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 		List<ParaObject> removeUs = AOPUtils.getArgOfListOfType(args, ParaObject.class);
 		Object result = mi.proceed(); // delete from DB even if "isStored = false"
 		search.unindexAll(appid, removeUs); // remove from index even if "isIndexed = false"
-		logger.debug("{}: Unindexed all {}->{}", getClass().getSimpleName(),
-				appid, (removeUs == null) ? null : removeUs.size());
 		return result;
 	}
 
 	private Object readFromCacheOperation(String appid, Object[] args, MethodInvocation mi) throws Throwable {
 		String getMeId = (args != null && args.length > 1) ? (String) args[1] : null;
         Object result = cache.get(appid, getMeId);
-        if (result != null) {
-			logger.debug("{}: Cache hit: {}->{}", getClass().getSimpleName(), appid, getMeId);
-		} else if (getMeId != null) {
+        if (result == null && getMeId != null) {
 			result = mi.proceed();
 			if (result != null && ((ParaObject) result).getCached()) {
 				cache.put(appid, getMeId, result);
-				logger.debug("{}: Cache miss: {}->{}", getClass().getSimpleName(), appid, getMeId);
 			}
 		}
 		return result;
@@ -275,7 +266,6 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 		ParaObject putMe = AOPUtils.getArgOfParaObject(args);
 		if (putMe != null && putMe.getCached()) {
 			cache.put(appid, putMe.getId(), putMe);
-			logger.debug("{}: Cache put: {}->{}", getClass().getSimpleName(), appid, putMe.getId());
 		}
 	}
 
@@ -283,7 +273,6 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 		ParaObject deleteMe = AOPUtils.getArgOfParaObject(args);
 		if (deleteMe != null) { // clear from cache even if "isCached = false"
 			cache.remove(appid, deleteMe.getId());
-			logger.debug("{}: Cache delete: {}->{}", getClass().getSimpleName(), appid, deleteMe.getId());
 		}
 	}
 
@@ -292,19 +281,15 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 		List<String> getUs = AOPUtils.getArgOfListOfType(args, String.class);
 		if (getUs != null) {
 			Map<String, ParaObject> cached = cache.getAll(appid, getUs);
-			logger.debug("{}: Cache getAll(): {}->{}", getClass().getSimpleName(), appid, getUs);
 			// hit the database if even a single object is missing from cache, then cache it
 			if (cached.size() < getUs.size()) {
-				logger.debug("{}: Cache getAll() will read from DB: {}", getClass().getSimpleName(), appid);
 				result = mi.proceed();
 				if (result != null) {
 					for (String id : getUs) {
-						logger.debug("{}: Cache getAll() got from DB: {}", getClass().getSimpleName(), id);
 						if (!cached.containsKey(id)) {
 							ParaObject obj = ((Map<String, ParaObject>) result).get(id);
 							if (obj != null && obj.getCached()) {
 								cache.put(appid, obj.getId(), obj);
-								logger.debug("{}: Cache miss on readAll: {}->{}", getClass().getSimpleName(), appid, id);
 							}
 						}
 					}
@@ -329,7 +314,6 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 			if (!map1.isEmpty()) {
 				cache.putAll(appid, map1);
 			}
-			logger.debug("{}: Cache put page: {}->{}", getClass().getSimpleName(), appid, map1.keySet());
 		}
 	}
 
@@ -342,7 +326,6 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 			}
 			// clear from cache even if "isCached = false"
 			cache.removeAll(appid, list);
-			logger.debug("{}: Cache delete page: {}->{}", getClass().getSimpleName(), appid, list);
 		}
 	}
 

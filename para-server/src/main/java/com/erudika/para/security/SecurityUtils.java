@@ -401,7 +401,6 @@ public final class SecurityUtils {
 		HashMap<String, String> map = new HashMap<>();
 		map.put("parentid", user.getId());
 		List<Sysprop> muList = CoreUtils.getInstance().getSearch().findTerms(user.getAppid(), "metaUser", map, true);
-		logger.debug("user: {}, metaUser: {}", user, muList);
 		if (muList == null || muList.isEmpty()) {
 			return;
 		}
