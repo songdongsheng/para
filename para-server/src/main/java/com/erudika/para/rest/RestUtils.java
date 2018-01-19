@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.container.ContainerRequestContext;
@@ -795,9 +796,11 @@ public final class RestUtils {
 		}
 
 		if ("id".equals(queryType)) {
-			items = findByIdQuery(params, appid, pager);
+			// items = findByIdQuery(params, appid, pager);
+			items = Collections.singletonList(Para.getDAO().read(appid, paramOrDefault(params, Config._ID, null)));
 		} else if ("ids".equals(queryType)) {
-			items = Para.getSearch().findByIds(appid, params.get("ids"));
+			// items = Para.getSearch().findByIds(appid, params.get("ids"));
+			items = (List<P>) Para.getDAO().readAll(appid, params.get("ids"), true).entrySet().stream().map(t -> t.getValue()).collect(Collectors.toList());
 			pager.setCount(items.size());
 		} else if ("nested".equals(queryType)) {
 			items = Para.getSearch().findNestedQuery(appid, type, params.getFirst("field"), query, pager);
@@ -838,6 +841,12 @@ public final class RestUtils {
 					terms.put(split[0], split[1]);
 				}
 			}
+
+			String id = terms.size() == 1 ? terms.get("id") : "";
+			if (StringUtils.isNotBlank(id)) {
+				return Collections.singletonList(Para.getDAO().read(appid, paramOrDefault(params, Config._ID, null)));
+			}
+
 			if (params.containsKey("count")) {
 				pager.setCount(Para.getSearch().getCount(appid, type, terms));
 			} else {
