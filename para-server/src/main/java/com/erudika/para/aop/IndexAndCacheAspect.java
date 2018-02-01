@@ -17,16 +17,6 @@
  */
 package com.erudika.para.aop;
 
-import com.erudika.para.IOListener;
-import com.erudika.para.Para;
-import com.erudika.para.annotations.Cached;
-import com.erudika.para.annotations.Indexed;
-import com.erudika.para.cache.Cache;
-import com.erudika.para.core.ParaObject;
-import com.erudika.para.persistence.DAO;
-import com.erudika.para.search.Search;
-import com.erudika.para.utils.Config;
-import com.erudika.para.validation.ValidationUtils;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -35,11 +25,28 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+
 import javax.inject.Inject;
+
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.erudika.para.IOListener;
+import com.erudika.para.Para;
+import com.erudika.para.annotations.Cached;
+import com.erudika.para.annotations.Indexed;
+import com.erudika.para.cache.Cache;
+import com.erudika.para.core.ParaObject;
+import com.erudika.para.core.Sysprop;
+import com.erudika.para.persistence.DAO;
+import com.erudika.para.search.Search;
+import com.erudika.para.security.SecurityUtils;
+import com.erudika.para.utils.Config;
+import com.erudika.para.utils.Utils;
+import com.erudika.para.validation.ValidationUtils;
 
 /**
  * This is the core method interceptor which enables caching and indexing.
@@ -206,6 +213,20 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 		if (addMe != null && errors.length == 0) {
 			AOPUtils.checkAndFixType(addMe);
 			if (addMe.getIndexed()) {
+				if (StringUtils.isBlank(addMe.getId())) {
+					addMe.setId(Utils.getNewId());
+		        }
+				String userId = SecurityUtils.getAuthenticatedUser().getId();
+		        if (addMe.getCreatorid() == null) {
+		        	addMe.setCreatorid(userId);
+		        }
+		        if (addMe.getTimestamp() == null) {
+		        	addMe.setTimestamp(System.currentTimeMillis());
+		        }
+		        if(addMe instanceof Sysprop){
+		        	((Sysprop)addMe).setUpdaterid(userId);
+		        }
+		        addMe.setUpdated(System.currentTimeMillis());
 				search.index(appid, addMe);
 			}
             if (addMe.getStored()) {
