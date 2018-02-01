@@ -75,11 +75,11 @@ public class User implements ParaObject {
 
 	private transient String password;
 
-	private transient List<String> roleId = new ArrayList<>();
+	private List<String> roleId = new ArrayList<>();
 
-	private transient String activeTenantId = "00000000";
+	private String activeTenantId = "00000000";
 
-	private transient List<String> adminTenantId;
+	private List<String> adminTenantId;
 
 	/**
 	 * No-args constructor.

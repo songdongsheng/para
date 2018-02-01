@@ -381,7 +381,10 @@ public final class SecurityUtils {
 
 		try {
 			String activeTenantId = (String) PropertyUtils.getProperty(mu, "activeTenantId");
-			user.setActiveTenantId(activeTenantId);
+			if (StringUtils.isNotBlank(activeTenantId)) {
+				user.setActiveTenantId(activeTenantId);
+			}
+
 			List<String> roleIdList = (List<String>) PropertyUtils.getProperty(mu, "roleId");
 			if (roleIdList == null || roleIdList.isEmpty()) {
 				return;

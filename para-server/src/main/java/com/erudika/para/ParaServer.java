@@ -35,7 +35,6 @@ import com.erudika.para.utils.Config;
 import com.erudika.para.utils.JwtRequestLogImpl;
 import com.erudika.para.utils.filters.CORSFilter;
 import com.erudika.para.utils.filters.ErrorFilter;
-import com.erudika.para.utils.filters.GZipServletFilter;
 import com.google.inject.Module;
 import javax.annotation.PreDestroy;
 import javax.servlet.Servlet;
@@ -52,6 +51,7 @@ import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
+import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,22 +128,6 @@ public class ParaServer implements WebApplicationInitializer, Ordered {
 	}
 
 	/**
-	 * @return GZIP filter bean
-	 */
-	@Bean
-	public FilterRegistrationBean gzipFilterRegistrationBean() {
-		String path = Api1.PATH + "*";
-		FilterRegistrationBean frb = new FilterRegistrationBean(new GZipServletFilter());
-		logger.debug("Initializing GZip filter [{}]...", path);
-		frb.addUrlPatterns(path);
-		frb.setAsyncSupported(true);
-		frb.setEnabled(Config.GZIP_ENABLED);
-		frb.setMatchAfter(true);
-		frb.setOrder(20);
-		return frb;
-	}
-
-	/**
 	 * @return CORS filter bean
 	 */
 	@Bean
@@ -173,6 +157,15 @@ public class ParaServer implements WebApplicationInitializer, Ordered {
 		JettyEmbeddedServletContainerFactory jef = new JettyEmbeddedServletContainerFactory();
 		jef.addServerCustomizers(new JettyServerCustomizer() {
 			public void customize(Server server) {
+				if (Config.GZIP_ENABLED) {
+					GzipHandler gzipHandler = new GzipHandler();
+					gzipHandler.setMinGzipSize(128);
+					gzipHandler.addIncludedMimeTypes("application/json");
+					gzipHandler.addIncludedMethods("GET", "POST", "PATCH", "PUT");
+					gzipHandler.setHandler(server.getHandler());
+					server.setHandler(gzipHandler);
+				}
+
 				if (Config.getConfigBoolean("access_log_enabled", true)) {
 					// enable access log via Logback
 					HandlerCollection handlers = new HandlerCollection();
@@ -186,7 +179,7 @@ public class ParaServer implements WebApplicationInitializer, Ordered {
 					rli.setQuiet(true);
 					rli.start();
 					reqLogs.setRequestLog(rli);
-					 handlers.addHandler(reqLogs);
+					handlers.addHandler(reqLogs);
 					server.setHandler(handlers);
 				}
 
