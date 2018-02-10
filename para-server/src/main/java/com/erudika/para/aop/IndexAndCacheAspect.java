@@ -41,6 +41,7 @@ import com.erudika.para.annotations.Indexed;
 import com.erudika.para.cache.Cache;
 import com.erudika.para.core.ParaObject;
 import com.erudika.para.core.Sysprop;
+import com.erudika.para.core.User;
 import com.erudika.para.persistence.DAO;
 import com.erudika.para.search.Search;
 import com.erudika.para.security.SecurityUtils;
@@ -216,15 +217,19 @@ public class IndexAndCacheAspect implements MethodInterceptor {
 				if (StringUtils.isBlank(addMe.getId())) {
 					addMe.setId(Utils.getNewId());
 		        }
-				String userId = SecurityUtils.getAuthenticatedUser().getId();
-		        if (addMe.getCreatorid() == null) {
-		        	addMe.setCreatorid(userId);
-		        }
+				User user = SecurityUtils.getAuthenticatedUser();
+				if(user!=null){
+					String userId = user.getId();
+					if (addMe.getCreatorid() == null) {
+						addMe.setCreatorid(userId);
+					}
+					
+					if(addMe instanceof Sysprop){
+						((Sysprop)addMe).setUpdaterid(userId);
+					}
+				}
 		        if (addMe.getTimestamp() == null) {
 		        	addMe.setTimestamp(System.currentTimeMillis());
-		        }
-		        if(addMe instanceof Sysprop){
-		        	((Sysprop)addMe).setUpdaterid(userId);
 		        }
 		        addMe.setUpdated(System.currentTimeMillis());
 				search.index(appid, addMe);
