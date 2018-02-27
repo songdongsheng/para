@@ -17,26 +17,22 @@
  */
 package com.erudika.para.core;
 
-import com.erudika.para.core.utils.CoreUtils;
-import com.erudika.para.core.utils.ParaObjectUtils;
 import com.erudika.para.annotations.Email;
 import com.erudika.para.annotations.Locked;
 import com.erudika.para.annotations.Stored;
+import com.erudika.para.core.utils.CoreUtils;
+import com.erudika.para.core.utils.ParaObjectUtils;
 import com.erudika.para.i18n.CurrencyUtils;
 import com.erudika.para.utils.Config;
 import com.erudika.para.utils.Pager;
 import com.erudika.para.utils.Utils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.validator.constraints.NotBlank;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.*;
 
 /**
  * The core user object. Stores information about users.
@@ -67,7 +63,7 @@ public class User implements ParaObject {
 	@Stored private Boolean twoFA;
 	@Stored private String twoFAkey;
 	@Stored private String twoFAbackupKeyHash;
-	@Stored @NotBlank @Email private String email;
+	@Stored @Email private String email;
 	@Stored private String currency;
 	@Stored private String picture;
 	@Stored private String lastIp;
