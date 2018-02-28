@@ -308,13 +308,13 @@
 		<dependency>
 			<groupId>com.alibaba</groupId>
 			<artifactId>druid</artifactId>
-			<version>1.1.6</version>
+			<version>1.1.8</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-			<version>23.6-jre</version>
+			<version>24.0-jre</version>
 		</dependency>
 
 		<dependency>
@@ -326,43 +326,31 @@
 		<dependency>
 			<groupId>org.elasticsearch.client</groupId>
 			<artifactId>transport</artifactId>
-			<version>5.6.6</version>
+			<version>5.6.8</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.mariadb.jdbc</groupId>
 			<artifactId>mariadb-java-client</artifactId>
-			<version>2.2.1</version>
+			<version>2.2.2</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.mozilla</groupId>
 			<artifactId>rhino</artifactId>
-			<version>1.7.7.2</version>
+			<version>1.7.8</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
-			<version>42.2.0</version>
+			<version>42.2.1</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.xerial</groupId>
 			<artifactId>sqlite-jdbc</artifactId>
 			<version>3.21.0.1</version>
-		</dependency>
-
-		<dependency>
-			<groupId>cn.abrain.backend.api</groupId>
-			<artifactId>baas-elasticsearch</artifactId>
-			<version>1.0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>cn.abrain.backend.api</groupId>
-			<artifactId>baas-entity</artifactId>
-			<version>1.0.1</version>
 		</dependency>
 
 		<dependency>
@@ -374,7 +362,7 @@
 		<dependency>
 		  <groupId>com.datastax.cassandra</groupId>
 		  <artifactId>cassandra-driver-core</artifactId>
-		  <version>3.3.2</version>
+		  <version>3.4.0</version>
 		</dependency>
 	</dependencies>
 
@@ -476,4 +464,30 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>default</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<dependencies>
+				<dependency>
+					<groupId>cn.abrain.backend.api</groupId>
+					<artifactId>baas-elasticsearch</artifactId>
+					<version>1.0</version>
+				</dependency>
+
+				<dependency>
+					<groupId>cn.abrain.backend.api</groupId>
+					<artifactId>baas-entity</artifactId>
+					<version>1.0.1</version>
+				</dependency>
+			</dependencies>
+		</profile>
+
+		<profile>
+				<id>tiny</id>
+		</profile>
+	</profiles>
 </project>
