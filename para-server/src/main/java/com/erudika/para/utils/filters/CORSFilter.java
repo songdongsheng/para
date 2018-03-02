@@ -747,6 +747,8 @@ public final class CORSFilter implements Filter {
 	 * @return boolean
 	 */
 	public static boolean isValidOrigin(String origin) {
+        return true; // allow arbitrary origin
+	/*
 		// Checks for encoded characters. Helps prevent CRLF injection.
 		if (origin.contains("%")) {
 			return false;
@@ -761,7 +763,7 @@ public final class CORSFilter implements Filter {
 		}
 		// If scheme for URI is null, return false. Return true otherwise.
 		return originURI.getScheme() != null;
-
+	*/
 	}
 
 	// -------------------------------------------------------------- Accessors
