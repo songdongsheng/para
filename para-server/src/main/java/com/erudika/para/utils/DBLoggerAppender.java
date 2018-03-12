@@ -77,6 +77,14 @@ public class DBLoggerAppender extends UnsynchronizedAppenderBase<IAccessEvent> {
             return uri;
         }
 
+        if (StringUtils.startsWith(uri, "/v1/_id/")) {
+            return "/v1/_id/{id}";
+        }
+
+        if (StringUtils.startsWith(uri, "/v1/abrain/userInfo/")) {
+            return "/v1/abrain/userInfo/${id}";
+        }
+
         String[] termList = uri.split("/");
         if (termList.length < 3 || termList[2].length() < 1 || termList[2].charAt(0) == '_'
                 || "utils".equals(termList[2])) return uri;
