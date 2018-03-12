@@ -151,7 +151,7 @@ public final class Utils {
 	 * @return the hash
 	 */
 	public static String bcrypt(String s) {
-		return (s == null) ? s : BCrypt.hashpw(s, BCrypt.gensalt(12));
+		return (s == null) ? s : BCrypt.hashpw(s, BCrypt.gensalt(6));
 	}
 
 	/**
