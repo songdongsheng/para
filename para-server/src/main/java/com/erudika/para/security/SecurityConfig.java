@@ -17,27 +17,12 @@
  */
 package com.erudika.para.security;
 
-import com.erudika.para.security.filters.OpenIDAuthFilter;
-import com.erudika.para.security.filters.GoogleAuthFilter;
-import com.erudika.para.security.filters.PasswordAuthFilter;
-import com.erudika.para.security.filters.TwitterAuthFilter;
-import com.erudika.para.security.filters.MicrosoftAuthFilter;
-import com.erudika.para.security.filters.GitHubAuthFilter;
-import com.erudika.para.security.filters.LinkedInAuthFilter;
-import com.erudika.para.security.filters.GenericOAuth2Filter;
-import com.erudika.para.security.filters.FacebookAuthFilter;
 import com.erudika.para.Para;
-import com.erudika.para.security.filters.LdapAuthFilter;
+import com.erudika.para.security.filters.*;
 import com.erudika.para.utils.Config;
 import com.typesafe.config.ConfigList;
 import com.typesafe.config.ConfigObject;
 import com.typesafe.config.ConfigValue;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.ServiceLoader;
-import javax.annotation.security.DeclareRoles;
-import javax.servlet.Filter;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
@@ -55,6 +40,12 @@ import org.springframework.security.web.authentication.session.NullAuthenticated
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.firewall.DefaultHttpFirewall;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+
+import javax.annotation.security.DeclareRoles;
+import javax.servlet.Filter;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.ServiceLoader;
 
 /**
  * Programmatic configuration for Spring Security.
@@ -81,6 +72,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	private final GenericOAuth2Filter oauth2Filter;
 	private final LdapAuthFilter ldapFilter;
 	private final JWTRestfulAuthFilter jwtFilter;
+	private final WechatAuthFilter wechatAuthFilter;
 
 	/**
 	 * No-args constructor.
@@ -99,6 +91,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		oauth2Filter = Para.getInstance(GenericOAuth2Filter.class);
 		ldapFilter = Para.getInstance(LdapAuthFilter.class);
 		jwtFilter = Para.getInstance(JWTRestfulAuthFilter.class);
+		wechatAuthFilter = Para.getInstance(WechatAuthFilter.class);
 	}
 
 	/**
@@ -251,6 +244,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		if (ldapFilter != null) {
 			ldapFilter.setAuthenticationManager(authenticationManager());
 			http.addFilterAfter(ldapFilter, BasicAuthenticationFilter.class);
+		}
+
+		if (wechatAuthFilter != null) {
+			wechatAuthFilter.setAuthenticationManager(authenticationManager());
+			http.addFilterAfter(wechatAuthFilter, BasicAuthenticationFilter.class);
 		}
 	}
 

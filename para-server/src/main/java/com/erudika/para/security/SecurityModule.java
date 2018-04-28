@@ -17,24 +17,16 @@
  */
 package com.erudika.para.security;
 
-import com.erudika.para.security.filters.OpenIDAuthFilter;
-import com.erudika.para.security.filters.GoogleAuthFilter;
-import com.erudika.para.security.filters.PasswordAuthFilter;
-import com.erudika.para.security.filters.TwitterAuthFilter;
-import com.erudika.para.security.filters.MicrosoftAuthFilter;
-import com.erudika.para.security.filters.GitHubAuthFilter;
-import com.erudika.para.security.filters.LinkedInAuthFilter;
-import com.erudika.para.security.filters.GenericOAuth2Filter;
-import com.erudika.para.security.filters.FacebookAuthFilter;
 import com.erudika.para.cache.Cache;
-import com.erudika.para.security.filters.LdapAuthFilter;
+import com.erudika.para.security.filters.*;
 import com.erudika.para.utils.Config;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import java.util.Collections;
 import org.openid4java.consumer.ConsumerException;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.openid.OpenID4JavaConsumer;
+
+import java.util.Collections;
 
 /**
  * The default security module.
@@ -57,6 +49,7 @@ public class SecurityModule extends AbstractModule {
 	private GenericOAuth2Filter oauth2Filter;
 	private LdapAuthFilter ldapFilter;
 	private JWTRestfulAuthFilter jwtFilter;
+	private WechatAuthFilter wechatAuthFilter;
 
 	protected void configure() {
 	}
@@ -375,7 +368,7 @@ public class SecurityModule extends AbstractModule {
 	@Provides
 	public JWTRestfulAuthFilter getJWTAuthFilter(FacebookAuthFilter fbAuth, GoogleAuthFilter gpAuth,
 			GitHubAuthFilter ghAuth, LinkedInAuthFilter liAuth, TwitterAuthFilter twAuth,
-			MicrosoftAuthFilter msAuth, GenericOAuth2Filter oAuth2, LdapAuthFilter ldAuth, PasswordAuthFilter pwAuth) {
+			MicrosoftAuthFilter msAuth, GenericOAuth2Filter oAuth2, LdapAuthFilter ldAuth, PasswordAuthFilter pwAuth, WechatAuthFilter wechatAuth) {
 		if (jwtFilter == null) {
 			jwtFilter = new JWTRestfulAuthFilter("/" + JWTRestfulAuthFilter.JWT_ACTION);
 			jwtFilter.setFacebookAuth(fbAuth);
@@ -387,6 +380,7 @@ public class SecurityModule extends AbstractModule {
 			jwtFilter.setGenericOAuth2Auth(oAuth2);
 			jwtFilter.setLdapAuth(ldAuth);
 			jwtFilter.setPasswordAuth(pwAuth);
+			jwtFilter.setWechatAuth(wechatAuth);
 		}
 		return jwtFilter;
 	}
@@ -396,5 +390,26 @@ public class SecurityModule extends AbstractModule {
 	 */
 	public void setJwtFilter(JWTRestfulAuthFilter jwtFilter) {
 		this.jwtFilter = jwtFilter;
+	}
+
+	/**
+	 * @return filter
+	 */
+	@Provides
+	public WechatAuthFilter getWechatAuthFilter() {
+		if (wechatAuthFilter == null) {
+			wechatAuthFilter = new WechatAuthFilter("/" + WechatAuthFilter.WECHAT_ACTION);
+			wechatAuthFilter.setAuthenticationSuccessHandler(getSuccessHandler());
+			wechatAuthFilter.setAuthenticationFailureHandler(getFailureHandler());
+			wechatAuthFilter.setRememberMeServices(getRemembeMeServices());
+		}
+		return wechatAuthFilter;
+	}
+
+	/**
+	 * @param wechatAuthFilter
+	 */
+	public void setWechatAuthFilter(WechatAuthFilter wechatAuthFilter) {
+		this.wechatAuthFilter = wechatAuthFilter;
 	}
 }

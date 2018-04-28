@@ -17,27 +17,24 @@
  */
 package com.erudika.para.security;
 
-import com.erudika.para.security.filters.PasswordAuthFilter;
-import com.erudika.para.security.filters.GoogleAuthFilter;
-import com.erudika.para.security.filters.TwitterAuthFilter;
-import com.erudika.para.security.filters.MicrosoftAuthFilter;
-import com.erudika.para.security.filters.GitHubAuthFilter;
-import com.erudika.para.security.filters.LinkedInAuthFilter;
-import com.erudika.para.security.filters.GenericOAuth2Filter;
-import com.erudika.para.security.filters.FacebookAuthFilter;
 import com.erudika.para.Para;
 import com.erudika.para.core.App;
-import com.erudika.para.core.utils.CoreUtils;
 import com.erudika.para.core.User;
+import com.erudika.para.core.utils.CoreUtils;
 import com.erudika.para.rest.RestUtils;
-import com.erudika.para.security.filters.LdapAuthFilter;
+import com.erudika.para.security.filters.*;
 import com.erudika.para.utils.Config;
 import com.erudika.para.utils.Utils;
 import com.nimbusds.jwt.SignedJWT;
-import java.io.IOException;
-import java.text.ParseException;
-import java.util.HashMap;
-import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.util.Assert;
+import org.springframework.web.filter.GenericFilterBean;
+
 import javax.inject.Inject;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -48,14 +45,10 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import org.springframework.util.Assert;
-import org.springframework.web.filter.GenericFilterBean;
+import java.io.IOException;
+import java.text.ParseException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Security filter that intercepts authentication requests (usually coming from the client-side)
@@ -76,6 +69,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 	private GenericOAuth2Filter oauth2Auth;
 	private LdapAuthFilter ldapAuth;
 	private PasswordAuthFilter passwordAuth;
+	private WechatAuthFilter wechatAuth;
 
 	/**
 	 * The default filter mapping.
@@ -146,7 +140,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 					response.setHeader("APP_ID", app.getAppIdentifier());
 					UserAuthentication userAuth = getOrCreateUser(app, provider, token);
 					User user = SecurityUtils.getAuthenticatedUser(userAuth);
-					if (user != null) {
+					if (user != null && user.getActive()) {
 						// issue token
 						SignedJWT newJWT = SecurityUtils.generateJWToken(user, app);
 						if (newJWT != null) {
@@ -298,6 +292,9 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 			return ldapAuth.getOrCreateUser(app, accessToken);
 		} else if ("password".equalsIgnoreCase(identityProvider)) {
 			return passwordAuth.getOrCreateUser(app, accessToken);
+		} else if ("wechat".equalsIgnoreCase(identityProvider)) {
+		    // 微信登录
+            return wechatAuth.getOrCreateUser(app, accessToken);
 		}
 		return null;
 	}
@@ -457,5 +454,20 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 	@Inject
 	public void setPasswordAuth(PasswordAuthFilter passwordAuth) {
 		this.passwordAuth = passwordAuth;
+	}
+
+	/**
+	 * @return auth filter
+	 */
+	public WechatAuthFilter getWechatAuth() {
+		return wechatAuth;
+	}
+
+	/**
+	 * @param wechatAuth auth filter
+	 */
+	@Inject
+	public void setWechatAuth(WechatAuthFilter wechatAuth) {
+		this.wechatAuth = this.wechatAuth;
 	}
 }

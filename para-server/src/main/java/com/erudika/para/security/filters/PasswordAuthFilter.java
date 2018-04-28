@@ -26,15 +26,16 @@ import com.erudika.para.security.AuthenticatedUserDetails;
 import com.erudika.para.security.SecurityUtils;
 import com.erudika.para.security.UserAuthentication;
 import com.erudika.para.utils.Config;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
 
 /**
  * A filter that handles simple authentication requests with email and password.
@@ -139,7 +140,7 @@ public class PasswordAuthFilter extends AbstractAuthenticationProcessingFilter {
 				} else {
 					map.put("loginId", email);
 				}
-
+				map.put("active", "true");
 				List<Sysprop> muList = CoreUtils.getInstance().getSearch().findTerms(app.getAppid(), "metaUser", map, true);
 				if (muList != null && !muList.isEmpty()) {
 					Sysprop mu = muList.get(0);
@@ -181,7 +182,7 @@ public class PasswordAuthFilter extends AbstractAuthenticationProcessingFilter {
 					SecurityUtils.setTenantInfo(user);
 					userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
 				}
-			} else if (User.passwordMatches(u)) {
+			} else if (user.getActive() && User.passwordMatches(u)) {
 				SecurityUtils.setTenantInfo(user);
 				userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
 			}
