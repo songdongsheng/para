@@ -35,12 +35,10 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.collections.bidimap.DualHashBidiMap;
@@ -64,6 +62,12 @@ public final class ParaObjectUtils {
 	private static final Map<String, String> CORE_TYPES = new DualHashBidiMap();
 	// maps lowercase simple names to class objects
 	private static final Map<String, Class<? extends ParaObject>> CORE_CLASSES = new DualHashBidiMap();
+
+	private static final Map<String, Map<String, Field>> typeFieldMap = new HashMap<>();
+	private static final Timestamp epoch = new Timestamp(0L);
+	// private static final String searchDateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ||yyyy-MM-dd'T'HH:mm:ssZ||yyyy-MM-dd'T'HH:mmZ||yyyy-MM-dd'T'HH:mm:ss.SSS||yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd'T'HH:mm||yyyy-MM-dd HH:mm:ss.SSS||yyyy-MM-dd HH:mm:ss||yyyy-MM-dd HH:mm||yyyy-MM-dd||yyyy/MM/dd||yyyyMMdd||yyyyMM||yyyy-MM||yyyy/MM||yyyy||epoch_millis||epoch_second";
+	private static final String searchDateFormat = "yyyy-MM-dd HH:mm:ss.SSS||yyyy-MM-dd HH:mm:ss||yyyy-MM-dd HH:mm||yyyy-MM-dd||yyyy/MM/dd||yyyyMMdd||yyyyMM||yyyy-MM||yyyy/MM||yyyy||epoch_millis||epoch_second";
+
 	private static final CoreClassScanner SCANNER = new CoreClassScanner();
 	private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 	private static final ObjectReader JSON_READER;
@@ -544,4 +548,178 @@ public final class ParaObjectUtils {
 		return "{}";
 	}
 
+	public static <P extends ParaObject> P newParaObjectInstance(String type) {
+		try {
+			return (P) ParaObjectUtils.toClass(type).getConstructor().newInstance();
+		} catch (ReflectiveOperationException e) {
+			logger.error("Reflective operation failed: {}", e.getMessage(), e);
+			throw new Error(e);
+		}
+	}
+
+	public static Map<String, Field> getFieldMap(String type) {
+		if (StringUtils.isBlank(type)) {
+			type = "sysprop";
+		}
+		Map<String, Field> fieldMap = typeFieldMap.get(type);
+		if (fieldMap == null || fieldMap.isEmpty()) {
+			fieldMap = new HashMap<>();
+			List<Field> fieldList = Utils.getAllDeclaredFields(ParaObjectUtils.toClass(type));
+			for (Field field : fieldList) {
+				if (field.getAnnotation(Stored.class) != null) {
+					fieldMap.put(field.getName(), field);
+					JsonProperty jsonName = field.getAnnotation(JsonProperty.class);
+					if (jsonName != null) {
+						fieldMap.put(jsonName.value(), field);
+					}
+				}
+			}
+			synchronized (typeFieldMap) {
+				typeFieldMap.put(type, fieldMap);
+			}
+		}
+		return fieldMap;
+	}
+
+	public static Object getProperty(ParaObject po, String name) {
+		if (po == null || name == null || name.isEmpty()) {
+			return null;
+		}
+
+		if (name.startsWith("properties.")) {
+			name = name.substring(11);
+		}
+
+		// access custom field
+		Map<String, Field> fieldMap = getFieldMap(po.getType());
+		Field field = fieldMap.get(name);
+		if (field == null) {
+			if (po instanceof Sysprop) {
+				Sysprop so = (Sysprop) po;
+				return so.getProperty(name);
+			}
+			return null;
+		}
+
+		try {
+			// access standard field
+			return PropertyUtils.getProperty(po, name);
+		} catch (Exception e) {
+			try {
+				return PropertyUtils.getProperty(po, field.getName());
+			} catch (Exception e1) {
+				return null;
+			}
+		}
+	}
+
+	public static Object getProperty(ParaObject po, String name, Object defaultValue) {
+		Object value = getProperty(po, name);
+		return value == null ? defaultValue : value;
+	}
+
+	public static String getPropertyAsString(ParaObject po, String name) {
+		Object value = getProperty(po, name);
+		if (value == null) return "";
+		if (value instanceof String) return (String) value;
+		return value.toString();
+	}
+
+	public static long getPropertyAsLong(ParaObject po, String name) {
+		Object value = getProperty(po, name);
+		if (value == null) return 0;
+		if (value instanceof Boolean) return ((Boolean) value) ? 1 : 0;
+		if (value instanceof Integer) return (Integer) value;
+		if (value instanceof Long) return (Long) value;
+		if (value instanceof Date) return ((Date) value).getTime();
+
+		String str = (value instanceof String) ? (String) value : value.toString();
+		if (str.length() >= 2 && str.charAt(0) == '"' && str.charAt(str.length() - 1) == '"') {
+			str = str.substring(1, str.length() - 1);
+		}
+
+		return Long.parseLong(str);
+	}
+	public static Timestamp toTimestamp(Object value) {
+		if (value instanceof Timestamp) {
+			return (Timestamp) value;
+		}
+
+		if (value instanceof Date) {
+			return new Timestamp(((Date) value).getTime());
+		}
+
+		if (value == null) {
+			return epoch;
+		}
+
+		String str = value.toString().trim();
+		while (str.length() > 1) {
+			if (str.charAt(0) == '"' && str.charAt(str.length() - 1) == '"') {
+				str = str.substring(1, str.length()).trim();
+			} else if (str.charAt(0) == '\'' && str.charAt(str.length() - 1) == '\'') {
+				str = str.substring(1, str.length()).trim();
+			} else {
+				break;
+			}
+		}
+
+		String[] fmtList = searchDateFormat.split("\\|\\|");
+		for (String fmt : fmtList) {
+			try {
+				if ("epoch_millis".equalsIgnoreCase(fmt.trim())) {
+					return new Timestamp(Long.parseLong(str));
+				} else if ("epoch_second".equalsIgnoreCase(fmt.trim())) {
+					return new Timestamp(Long.parseLong(str) * 1000L);
+				} else if (str.length() == fmt.length()){
+					SimpleDateFormat parser = new SimpleDateFormat(fmt.trim());
+					return new Timestamp(parser.parse(str).getTime());
+				}
+			} catch (Exception ignored) {}
+		}
+
+		return epoch;
+	}
+
+	public static Date getPropertyAsDate(ParaObject po, String name) {
+		Object value = getProperty(po, name);
+		if (value == null) return null;
+		return toTimestamp(value);
+	}
+
+	public static Date getPropertyAsDate(ParaObject po, String name, Date defaultValue) {
+		Date date = getPropertyAsDate(po, name);
+		return date == null ? defaultValue : date;
+	}
+
+	public static ParaObject setProperty(ParaObject po, String name, Object value) {
+		if (po == null || name == null || name.isEmpty()) {
+			return po;
+		}
+
+		if (name.startsWith("properties.")) {
+			name = name.substring(11);
+		}
+
+		// access custom field
+		Map<String, Field> fieldMap = getFieldMap(po.getType());
+		Field field = fieldMap.get(name);
+		if (field == null) {
+			if (po instanceof Sysprop) {
+				Sysprop so = (Sysprop) po;
+				so.getProperties().put(name, value);
+				return po;
+			}
+			return po;
+		}
+
+		try {
+			// access standard field
+			PropertyUtils.setProperty(po, name, value);
+		} catch (Exception ignored) {
+			logger.error("setProperty failed, po:{}, name: {}, value: {}", po, name, value, ignored);
+		}
+
+		return po;
+	}
 }

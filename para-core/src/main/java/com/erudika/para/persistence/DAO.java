@@ -198,4 +198,10 @@ public interface DAO {
 	 * @param objects a list of objects to delete
 	 */
 	<P extends ParaObject> void deleteAll(List<P> objects);
+
+	// Copy from Search interface
+	<P extends ParaObject> List<P> findTerms(String type, Map<String, ?> terms, boolean matchAll, Pager... pager);
+	<P extends ParaObject> List<P> findTerms(String appid, String type, Map<String, ?> terms, boolean matchAll, Pager... pager);
+	<P extends ParaObject> List<P> findTermInList(String type, String field, List<?> terms, Pager... pager);
+	<P extends ParaObject> List<P> findTermInList(String appid, String type, String field, List<?> terms, Pager... pager);
 }

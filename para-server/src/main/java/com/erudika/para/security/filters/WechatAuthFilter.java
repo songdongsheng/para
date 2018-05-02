@@ -1,6 +1,5 @@
 package com.erudika.para.security.filters;
 
-import cn.abrain.baas.rbac.entity.MetaUser;
 import com.erudika.para.Para;
 import com.erudika.para.core.App;
 import com.erudika.para.core.Sysprop;
@@ -182,9 +181,9 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                     HashMap<String, String> map = new HashMap<>();
                     map.put("wechat", Config.WECHAT_PREFIX + unionid.toLowerCase());
                     map.put("active", "true");
-                    List<MetaUser> muList = CoreUtils.getInstance().getSearch().findTerms(app.getAppid(), "metaUser", map, true);
+                    List<Sysprop> muList = CoreUtils.getInstance().getSearch().findTerms(app.getAppid(), "metaUser", map, true);
                     if (muList != null && !muList.isEmpty()) {
-                        MetaUser mu = muList.get(0);
+                        Sysprop mu = muList.get(0);
                         map.clear();
                         map.put("id", mu.getParentid());
                         List<User> userList = CoreUtils.getInstance().getSearch().findTerms(app.getAppid(), "user", map, true);
@@ -194,10 +193,10 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                             boolean update = false;
                             if (!StringUtils.equals(user.getPicture(), picture)) {
                                 user.setPicture(picture);
-                                mu.setPicture(picture);
+                                ParaObjectUtils.setProperty(mu, "picture", picture); // mu.setPicture(picture);
                                 update = true;
                             }
-                            String sex1 = mu.getSex();
+                            String sex1 = ParaObjectUtils.getPropertyAsString(mu, "sex"); //  String sex1 = mu.getSex();
                             if (!StringUtils.equals(sex, sex1)) {
                                 mu.addProperty("sex", sex);
                                 update = true;
@@ -212,7 +211,7 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                         }
                     } else {
                         // 查询该微信号未绑定用户时自动根据微信号注册账号
-                        MetaUser metaUser = (MetaUser) createUser(app, name, pic, unionid, sex);
+                        Sysprop metaUser = (Sysprop) createUser(app, name, pic, unionid, sex);
                         String mid = metaUser.getId();
                         if (mid == null) {
                             user.delete();
@@ -241,20 +240,20 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
         if (id == null) {
             throw new AuthenticationServiceException("Authentication failed: cannot create new user.");
         }
-        MetaUser metaUser = new MetaUser();
+        Sysprop metaUser = ParaObjectUtils.newParaObjectInstance("metaUser");
         metaUser.setType("metaUser");
         metaUser.setAppid(getAppid(app));
         metaUser.setTimestamp(System.currentTimeMillis());
         metaUser.setUpdated(System.currentTimeMillis());
         metaUser.setParentid(id);
         metaUser.setName(name);
-        metaUser.setPicture(pic);
-        metaUser.setSex(sex);
-        metaUser.setWechat(Config.WECHAT_PREFIX + unionid);
+        ParaObjectUtils.setProperty(metaUser, "picture", pic); // metaUser.setPicture(pic);
+        ParaObjectUtils.setProperty(metaUser, "sex", sex); //  metaUser.setSex(sex);
+        ParaObjectUtils.setProperty(metaUser, "wechat", Config.WECHAT_PREFIX + unionid); //  metaUser.setWechat(Config.WECHAT_PREFIX + unionid);
         metaUser.addProperty("tenantId", Config.getConfigParam("rootTenantId", "00000000"));
         metaUser.addProperty("username", name);
-        metaUser.setRoleId(Arrays.asList("05G109TZB1WFEXA1"));
-        metaUser.setProfileId(Arrays.asList());
+        ParaObjectUtils.setProperty(metaUser, "roleId", Arrays.asList("05G109TZB1WFEXA1")); //  metaUser.setRoleId(Arrays.asList("05G109TZB1WFEXA1"));
+        ParaObjectUtils.setProperty(metaUser, "profileId", Arrays.asList()); //  metaUser.setProfileId(Arrays.asList());
         metaUser.create();
         return metaUser;
     }

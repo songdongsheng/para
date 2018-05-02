@@ -188,4 +188,24 @@ public class H2DAO implements DAO {
 		deleteAll(Config.getRootAppIdentifier(), objects);
 	}
 
+	@Override
+	public <P extends ParaObject> List<P> findTerms(String type, Map<String, ?> terms, boolean matchAll, Pager... pager) {
+		return null;
+	}
+
+	@Override
+	public <P extends ParaObject> List<P> findTerms(String appid, String type, Map<String, ?> terms, boolean matchAll, Pager... pager) {
+		return null;
+	}
+
+	@Override
+	public <P extends ParaObject> List<P> findTermInList(String type, String field, List<?> terms, Pager... pager) {
+		return null;
+	}
+
+	@Override
+	public <P extends ParaObject> List<P> findTermInList(String appid, String type, String field, List<?> terms, Pager... pager) {
+		return null;
+	}
+
 }
