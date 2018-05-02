@@ -194,7 +194,7 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                             boolean update = false;
                             if (!StringUtils.equals(user.getPicture(), picture)) {
                                 user.setPicture(picture);
-//                                mu.setPicture(picture);
+                                mu.setPicture(picture);
                                 update = true;
                             }
                             String sex1 = mu.getSex();
@@ -248,7 +248,7 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
         metaUser.setUpdated(System.currentTimeMillis());
         metaUser.setParentid(id);
         metaUser.setName(name);
-//        metaUser.setPicture(pic);
+        metaUser.setPicture(pic);
         metaUser.setSex(sex);
         metaUser.setWechat(Config.WECHAT_PREFIX + unionid);
         metaUser.addProperty("tenantId", Config.getConfigParam("rootTenantId", "00000000"));
