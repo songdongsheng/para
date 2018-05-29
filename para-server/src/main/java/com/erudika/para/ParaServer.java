@@ -208,33 +208,51 @@ public class ParaServer implements WebApplicationInitializer, Ordered {
 
 	@Bean
 	public ServletRegistrationBean UserRegistrationServletRegistrationBean() {
+		String[] classNameList = new String[] {
+				"cn.abrain.api.usermgr.UserRegistrationServlet",
+				"cn.abrain.api.usermgr.servlet.UserRegistrationServlet"};
+
 		ServiceLoader<Servlet> loader = ServiceLoader.load(Servlet.class, Para.getParaClassLoader());
 		for (Servlet servlet : loader) {
-			if (servlet != null && servlet.getClass().getName().equals("cn.abrain.api.usermgr.UserRegistrationServlet")) {
-				return new ServletRegistrationBean(servlet, "/register/*");
+			for (String className: classNameList) {
+				if (servlet != null && servlet.getClass().getName().equals(className)) {
+					return new ServletRegistrationBean(servlet, "/register/*");
+				}
 			}
 		}
-		return null;
+		throw new RuntimeException("UserRegistrationServlet not found");
 	}
 	@Bean
 	public ServletRegistrationBean UserResetServletRegistrationBean() {
+		String[] classNameList = new String[] {
+				"cn.abrain.api.usermgr.UserReSetServlet",
+				"cn.abrain.api.usermgr.servlet.UserReSetServlet" };
+
 		ServiceLoader<Servlet> loader = ServiceLoader.load(Servlet.class, Para.getParaClassLoader());
 		for (Servlet servlet : loader) {
-			if (servlet != null && servlet.getClass().getName().equals("cn.abrain.api.usermgr.UserReSetServlet")) {
-				return new ServletRegistrationBean(servlet, "/reset/*");
+			for (String className: classNameList) {
+				if (servlet != null && servlet.getClass().getName().equals(className)) {
+					return new ServletRegistrationBean(servlet, "/reset/*");
+				}
 			}
 		}
-		return null;
+		throw new RuntimeException("UserReSetServlet not found");
 	}
 	@Bean
 	public ServletRegistrationBean UserCheckServletRegistrationBean() {
+		String[] classNameList = new String[] {
+				"cn.abrain.api.usermgr.UserCheckServlet",
+				"cn.abrain.api.usermgr.servlet.UserCheckServlet" };
+
 		ServiceLoader<Servlet> loader = ServiceLoader.load(Servlet.class, Para.getParaClassLoader());
 		for (Servlet servlet : loader) {
-			if (servlet != null && servlet.getClass().getName().equals("cn.abrain.api.usermgr.UserCheckServlet")) {
-				return new ServletRegistrationBean(servlet, "/check/*");
+			for (String className: classNameList) {
+				if (servlet != null && servlet.getClass().getName().equals(className)) {
+					return new ServletRegistrationBean(servlet, "/check/*");
+				}
 			}
 		}
-		return null;
+		throw new RuntimeException("UserCheckServlet not found");
 	}
 
 	/**

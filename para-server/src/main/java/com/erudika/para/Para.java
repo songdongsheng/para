@@ -40,12 +40,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.TreeMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -156,12 +152,22 @@ public final class Para {
 			injector = null;
 			if (!EXECUTOR.isShutdown()) {
 				EXECUTOR.shutdown();
-				EXECUTOR.awaitTermination(60, TimeUnit.SECONDS);
 			}
 			if (!SCHEDULER.isShutdown()) {
 				SCHEDULER.shutdown();
-				SCHEDULER.awaitTermination(60, TimeUnit.SECONDS);
 			}
+			CompletableFuture<Void> all = CompletableFuture.allOf(CompletableFuture.runAsync(() -> {
+				try {
+					EXECUTOR.awaitTermination(5, TimeUnit.SECONDS);
+				} catch (InterruptedException ignored) {
+				}
+			}), CompletableFuture.runAsync(() -> {
+				try {
+					SCHEDULER.awaitTermination(5, TimeUnit.SECONDS);
+				} catch (InterruptedException ignored) {
+				}
+			}));
+			all.get();
 		} catch (Exception e) {
 			logger.error(null, e);
 		}
