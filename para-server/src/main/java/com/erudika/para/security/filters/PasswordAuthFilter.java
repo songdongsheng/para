@@ -182,6 +182,9 @@ public class PasswordAuthFilter extends AbstractAuthenticationProcessingFilter {
 					SecurityUtils.setTenantInfo(user);
 					userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
 				}
+			} else if (user == null) {
+				logger.error("User '" + email + "' not auto registered");
+				return null;
 			} else if (user.getActive() && User.passwordMatches(u)) {
 				SecurityUtils.setTenantInfo(user);
 				userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
