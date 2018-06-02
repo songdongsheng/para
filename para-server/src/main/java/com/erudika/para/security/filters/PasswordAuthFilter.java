@@ -141,12 +141,12 @@ public class PasswordAuthFilter extends AbstractAuthenticationProcessingFilter {
 					map.put("loginId", email);
 				}
 				map.put("active", "true");
-				List<Sysprop> muList = CoreUtils.getInstance().getSearch().findTerms(app.getAppid(), "metaUser", map, true);
+				List<Sysprop> muList = CoreUtils.getInstance().getDao().findTerms(app.getAppid(), "metaUser", map, true);
 				if (muList != null && !muList.isEmpty()) {
 					Sysprop mu = muList.get(0);
 					map.clear();
 					map.put("id", mu.getParentid());
-					List<User> userList = CoreUtils.getInstance().getSearch().findTerms(app.getAppid(), "user", map, true);
+					List<User> userList = CoreUtils.getInstance().getDao().findTerms(app.getAppid(), "user", map, true);
 					if (userList != null && !userList.isEmpty()) {
 						user = userList.get(0);
 						u.setIdentifier(user.getIdentifier());
