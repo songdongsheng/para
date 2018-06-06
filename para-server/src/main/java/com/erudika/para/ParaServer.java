@@ -36,19 +36,8 @@ import com.erudika.para.utils.JwtRequestLogImpl;
 import com.erudika.para.utils.filters.CORSFilter;
 import com.erudika.para.utils.filters.ErrorFilter;
 import com.google.inject.Module;
-import javax.annotation.PreDestroy;
-import javax.servlet.Servlet;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletException;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.eclipse.jetty.server.ConnectionFactory;
-import org.eclipse.jetty.server.Connector;
-import org.eclipse.jetty.server.ForwardedRequestCustomizer;
-import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.server.HttpConfiguration;
-import org.eclipse.jetty.server.HttpConnectionFactory;
-import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
@@ -75,6 +64,11 @@ import org.springframework.web.WebApplicationInitializer;
 import org.springframework.web.context.ContextLoaderListener;
 import org.springframework.web.context.WebApplicationContext;
 
+import javax.annotation.PreDestroy;
+import javax.servlet.Servlet;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletException;
 import java.util.ServiceLoader;
 
 /**
@@ -254,6 +248,22 @@ public class ParaServer implements WebApplicationInitializer, Ordered {
 		}
 		throw new RuntimeException("UserCheckServlet not found");
 	}
+    @Bean
+    public ServletRegistrationBean UserActiveServletRegistrationBean() {
+        String[] classNameList = new String[] {
+                "cn.abrain.api.usermgr.UserActiveServlet",
+                "cn.abrain.api.usermgr.servlet.UserActiveServlet" };
+
+        ServiceLoader<Servlet> loader = ServiceLoader.load(Servlet.class, Para.getParaClassLoader());
+        for (Servlet servlet : loader) {
+            for (String className: classNameList) {
+                if (servlet != null && servlet.getClass().getName().equals(className)) {
+                    return new ServletRegistrationBean(servlet, "/active/*");
+                }
+            }
+        }
+        throw new RuntimeException("UserActiveServlet not found");
+    }
 
 	/**
 	 * Called before shutdown.
