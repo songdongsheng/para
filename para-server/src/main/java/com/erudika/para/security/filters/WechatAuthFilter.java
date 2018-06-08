@@ -78,32 +78,36 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
             logger.debug("Request is to process authentication");
         }
 
-        Authentication authResult;
-        try {
-            authResult = attemptAuthentication(request, response);
-            if (authResult == null) {
-                return;
-            }
-            String appid = request.getParameter(Config._APPID);
-            App app = Para.getDAO().read(App.id(appid == null ? Config.getRootAppIdentifier() : appid));
-            User user = SecurityUtils.getAuthenticatedUser(authResult);
-            if (user != null && user.getActive()) {
-                // issue token
-                SignedJWT newJWT = SecurityUtils.generateJWToken(user, app);
-                if (newJWT != null) {
-                    succesHandler(response, user, newJWT);
+        final String requestURI = request.getRequestURI();
+        if (requestURI.endsWith(WECHAT_ACTION)) {
+            Authentication authResult;
+            try {
+                authResult = attemptAuthentication(request, response);
+                if (authResult == null) {
                     return;
                 }
+                String appid = request.getParameter(Config._APPID);
+                App app = Para.getDAO().read(App.id(appid == null ? Config.getRootAppIdentifier() : appid));
+                User user = SecurityUtils.getAuthenticatedUser(authResult);
+                if (user != null && user.getActive()) {
+                    // issue token
+                    SignedJWT newJWT = SecurityUtils.generateJWToken(user, app);
+                    if (newJWT != null) {
+                        succesHandler(response, user, newJWT);
+                        return;
+                    }
+                    return;
+                }
+            } catch (InternalAuthenticationServiceException failed) {
+                logger.error("An internal error occurred while trying to authenticate the user.", failed);
+                unsuccessfulAuthentication(request, response, failed);
+                return;
+            } catch (AuthenticationException failed) {
+                // Authentication failed
+//                unsuccessfulAuthentication(request, response, failed);
+                RestUtils.returnStatusResponse(response, HttpServletResponse.SC_FORBIDDEN, failed.getMessage());
                 return;
             }
-        } catch (InternalAuthenticationServiceException failed) {
-            logger.error("An internal error occurred while trying to authenticate the user.", failed);
-            unsuccessfulAuthentication(request, response, failed);
-            return;
-        } catch (AuthenticationException failed) {
-            // Authentication failed
-            unsuccessfulAuthentication(request, response, failed);
-            return;
         }
         chain.doFilter(request, response);
     }
@@ -132,9 +136,10 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                 } catch (Exception e) {
                     logger.warn("wechat auth request failed: GET " + url, e);
                 }
+            } else {
+                logger.warn("wechat auth request failed: the required query parameters 'code', are missing.");
             }
         }
-
         return SecurityUtils.checkIfActive(userAuth, SecurityUtils.getAuthenticatedUser(userAuth), true);
     }
 
@@ -181,12 +186,12 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                     HashMap<String, String> map = new HashMap<>();
                     map.put("wechat", Config.WECHAT_PREFIX + unionid.toLowerCase());
                     map.put("active", "true");
-                    List<Sysprop> muList = CoreUtils.getInstance().getSearch().findTerms(app.getAppid(), "metaUser", map, true);
+                    List<Sysprop> muList = CoreUtils.getInstance().getDao().findTerms(app.getAppid(), "metaUser", map, true);
                     if (muList != null && !muList.isEmpty()) {
                         Sysprop mu = muList.get(0);
                         map.clear();
                         map.put("id", mu.getParentid());
-                        List<User> userList = CoreUtils.getInstance().getSearch().findTerms(app.getAppid(), "user", map, true);
+                        List<User> userList = CoreUtils.getInstance().getDao().findTerms(app.getAppid(), "user", map, true);
                         if (userList != null && !userList.isEmpty()) {
                             user = userList.get(0);
                             String picture = getPicture(pic);
