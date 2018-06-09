@@ -73,6 +73,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	private final LdapAuthFilter ldapFilter;
 	private final JWTRestfulAuthFilter jwtFilter;
 	private final WechatAuthFilter wechatAuthFilter;
+	private final VerificationCodeAuthFilter verificationCodeAuthFilter;
 
 	/**
 	 * No-args constructor.
@@ -92,6 +93,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		ldapFilter = Para.getInstance(LdapAuthFilter.class);
 		jwtFilter = Para.getInstance(JWTRestfulAuthFilter.class);
 		wechatAuthFilter = Para.getInstance(WechatAuthFilter.class);
+		verificationCodeAuthFilter = Para.getInstance(VerificationCodeAuthFilter.class);
 	}
 
 	/**
@@ -251,6 +253,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			wechatAuthFilter.setAuthenticationManager(authenticationManager());
 			http.addFilterAfter(wechatAuthFilter, BasicAuthenticationFilter.class);
 		}
+
+		if (verificationCodeAuthFilter != null) {
+		    verificationCodeAuthFilter.setAuthenticationManager(authenticationManager());
+		    http.addFilterAfter(verificationCodeAuthFilter, BasicAuthenticationFilter.class);
+        }
 	}
 
 	private void parseProtectedResources(HttpSecurity http, ConfigObject protectedResources) throws Exception {

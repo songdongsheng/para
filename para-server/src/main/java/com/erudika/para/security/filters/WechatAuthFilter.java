@@ -186,7 +186,7 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                     HashMap<String, String> map = new HashMap<>();
                     map.put("wechat", Config.WECHAT_PREFIX + unionid.toLowerCase());
                     map.put("active", "true");
-                    List<Sysprop> muList = CoreUtils.getInstance().getDao().findTerms(app.getAppid(), "metaUser", map, true);
+                    List<Sysprop> muList = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaUser", map, true);
                     if (muList != null && !muList.isEmpty()) {
                         Sysprop mu = muList.get(0);
                         map.clear();
@@ -216,7 +216,7 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                         }
                     } else {
                         // 查询该微信号未绑定用户时自动根据微信号注册账号
-                        Sysprop metaUser = (Sysprop) createUser(app, name, pic, unionid, sex);
+                        Sysprop metaUser = createUser(app, name, pic, unionid, sex, user);
                         String mid = metaUser.getId();
                         if (mid == null) {
                             user.delete();
@@ -231,9 +231,8 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
         return SecurityUtils.checkIfActive(userAuth, user, false);
     }
 
-    private Sysprop createUser(App app, String name, String pic, String unionid, String sex) {
+    private Sysprop createUser(App app, String name, String pic, String unionid, String sex, User user) {
         //user is new
-        User user = new User();
         user.setActive(true);
         user.setAppid(getAppid(app));
 //        user.setEmail(StringUtils.isBlank(email) ? unionid + "@github.com" : email);

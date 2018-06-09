@@ -50,6 +50,7 @@ public class SecurityModule extends AbstractModule {
 	private LdapAuthFilter ldapFilter;
 	private JWTRestfulAuthFilter jwtFilter;
 	private WechatAuthFilter wechatAuthFilter;
+	private VerificationCodeAuthFilter verificationCodeAuthFilter;
 
 	protected void configure() {
 	}
@@ -368,7 +369,7 @@ public class SecurityModule extends AbstractModule {
 	@Provides
 	public JWTRestfulAuthFilter getJWTAuthFilter(FacebookAuthFilter fbAuth, GoogleAuthFilter gpAuth,
 			GitHubAuthFilter ghAuth, LinkedInAuthFilter liAuth, TwitterAuthFilter twAuth,
-			MicrosoftAuthFilter msAuth, GenericOAuth2Filter oAuth2, LdapAuthFilter ldAuth, PasswordAuthFilter pwAuth, WechatAuthFilter wechatAuth) {
+			MicrosoftAuthFilter msAuth, GenericOAuth2Filter oAuth2, LdapAuthFilter ldAuth, PasswordAuthFilter pwAuth, WechatAuthFilter wechatAuth, VerificationCodeAuthFilter verificationCodeAuth) {
 		if (jwtFilter == null) {
 			jwtFilter = new JWTRestfulAuthFilter("/" + JWTRestfulAuthFilter.JWT_ACTION);
 			jwtFilter.setFacebookAuth(fbAuth);
@@ -381,6 +382,7 @@ public class SecurityModule extends AbstractModule {
 			jwtFilter.setLdapAuth(ldAuth);
 			jwtFilter.setPasswordAuth(pwAuth);
 			jwtFilter.setWechatAuth(wechatAuth);
+			jwtFilter.setVerificationCodeAuth(verificationCodeAuth);
 		}
 		return jwtFilter;
 	}
@@ -411,5 +413,20 @@ public class SecurityModule extends AbstractModule {
 	 */
 	public void setWechatAuthFilter(WechatAuthFilter wechatAuthFilter) {
 		this.wechatAuthFilter = wechatAuthFilter;
+	}
+
+	@Provides
+	public VerificationCodeAuthFilter getVerificationCodeAuthFilter() {
+		if (verificationCodeAuthFilter == null) {
+			verificationCodeAuthFilter = new VerificationCodeAuthFilter("/" + VerificationCodeAuthFilter.VERIFICATIONCODE_ACTION);
+			verificationCodeAuthFilter.setAuthenticationSuccessHandler(getSuccessHandler());
+			verificationCodeAuthFilter.setAuthenticationFailureHandler(getFailureHandler());
+			verificationCodeAuthFilter.setRememberMeServices(getRemembeMeServices());
+		}
+		return verificationCodeAuthFilter;
+	}
+
+	public void setVerificationCodeAuthFilter(VerificationCodeAuthFilter verificationCodeAuthFilter) {
+		this.verificationCodeAuthFilter = verificationCodeAuthFilter;
 	}
 }

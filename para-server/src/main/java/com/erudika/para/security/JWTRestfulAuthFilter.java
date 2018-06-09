@@ -70,6 +70,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 	private LdapAuthFilter ldapAuth;
 	private PasswordAuthFilter passwordAuth;
 	private WechatAuthFilter wechatAuth;
+	private VerificationCodeAuthFilter verificationCodeAuth;
 
 	/**
 	 * The default filter mapping.
@@ -274,7 +275,15 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 
 	private UserAuthentication getOrCreateUser(App app, String identityProvider, String accessToken)
 			throws IOException {
-		if ("facebook".equalsIgnoreCase(identityProvider)) {
+		if ("password".equalsIgnoreCase(identityProvider)) {
+			return passwordAuth.getOrCreateUser(app, accessToken);
+		} else if ("wechat".equalsIgnoreCase(identityProvider)) {
+			// 微信登录
+			return wechatAuth.getOrCreateUser(app, accessToken);
+		} else if ("verificationcode".equalsIgnoreCase(identityProvider)) {
+			// 验证码登陆
+			return verificationCodeAuth.getOrCreateUser(app, accessToken);
+		} else if ("facebook".equalsIgnoreCase(identityProvider)) {
 			return facebookAuth.getOrCreateUser(app, accessToken);
 		} else if ("google".equalsIgnoreCase(identityProvider)) {
 			return googleAuth.getOrCreateUser(app, accessToken);
@@ -290,11 +299,6 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 			return oauth2Auth.getOrCreateUser(app, accessToken);
 		} else if ("ldap".equalsIgnoreCase(identityProvider)) {
 			return ldapAuth.getOrCreateUser(app, accessToken);
-		} else if ("password".equalsIgnoreCase(identityProvider)) {
-			return passwordAuth.getOrCreateUser(app, accessToken);
-		} else if ("wechat".equalsIgnoreCase(identityProvider)) {
-		    // 微信登录
-            return wechatAuth.getOrCreateUser(app, accessToken);
 		}
 		return null;
 	}
@@ -469,5 +473,13 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 	@Inject
 	public void setWechatAuth(WechatAuthFilter wechatAuth) {
 		this.wechatAuth = this.wechatAuth;
+	}
+
+	public VerificationCodeAuthFilter getVerificationCodeAuth() {
+		return verificationCodeAuth;
+	}
+
+	public void setVerificationCodeAuth(VerificationCodeAuthFilter verificationCodeAuth) {
+		this.verificationCodeAuth = verificationCodeAuth;
 	}
 }

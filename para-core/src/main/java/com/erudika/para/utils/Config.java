@@ -106,6 +106,8 @@ public final class Config {
 	/** Wechat prefix - defaults to 'Wechat:'. */
 	public static final String WECHAT_PREFIX = "wechat" + SEPARATOR;
 
+	public static final String VERIFICATIONCODE_PREFIX = "vcode" + SEPARATOR;
+
 	//////////  INITIALIZATION PARAMETERS  //////////////
 	/**
 	 * Maximum results per page - limits the number of items to show in search results. Default is 1000.

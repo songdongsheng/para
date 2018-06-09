@@ -233,10 +233,10 @@ public class ParaServer implements WebApplicationInitializer, Ordered {
 		throw new RuntimeException("UserReSetServlet not found");
 	}
 	@Bean
-	public ServletRegistrationBean UserCheckServletRegistrationBean() {
+	public ServletRegistrationBean UserLoginServletRegistrationBean() {
 		String[] classNameList = new String[] {
-				"cn.abrain.api.usermgr.UserCheckServlet",
-				"cn.abrain.api.usermgr.servlet.UserCheckServlet" };
+				"cn.abrain.api.usermgr.UserLoginServlet",
+				"cn.abrain.api.usermgr.servlet.UserLoginServlet" };
 
 		ServiceLoader<Servlet> loader = ServiceLoader.load(Servlet.class, Para.getParaClassLoader());
 		for (Servlet servlet : loader) {
@@ -246,7 +246,7 @@ public class ParaServer implements WebApplicationInitializer, Ordered {
 				}
 			}
 		}
-		throw new RuntimeException("UserCheckServlet not found");
+		throw new RuntimeException("UserLoginServlet not found");
 	}
     @Bean
     public ServletRegistrationBean UserActiveServletRegistrationBean() {
