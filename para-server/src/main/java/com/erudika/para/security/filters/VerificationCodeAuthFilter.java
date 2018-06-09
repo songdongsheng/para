@@ -232,6 +232,7 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
         metaUser.setUpdated(System.currentTimeMillis());
         metaUser.setParentid(id);
         metaUser.setName(phone); //手机验证码登陆默认使用手机号昵称
+        ParaObjectUtils.setProperty(metaUser, "picture", user.getPicture());
         ParaObjectUtils.setProperty(metaUser,"phone",phone);
         ParaObjectUtils.setProperty(metaUser,"tenantId", Config.getConfigParam("rootTenantId", "00000000"));
         ParaObjectUtils.setProperty(metaUser,"username", phone);
