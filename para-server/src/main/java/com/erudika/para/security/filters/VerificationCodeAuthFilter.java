@@ -1,5 +1,6 @@
 package com.erudika.para.security.filters;
 
+import cn.abrain.baas.rbac.entity.MetaTenantUser;
 import cn.abrain.baas.rbac.entity.VerificationCode;
 import com.erudika.para.Para;
 import com.erudika.para.core.App;
@@ -185,12 +186,32 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
                 if (mid == null) {
                     user.delete();
                     throw new AuthenticationServiceException("Authentication failed: cannot create new metaUser.");
+                } else {
+                    // 绑定邀请信息
+                    // 场景：当该登录用户为手机验证码登录自动注册的用户时，查询该用户在注册前是否存在邀请信息，存在则进行绑定
+                    bindMetaTenantUser(phone, metaUser.getParentid(), 4);
                 }
-
             }
             userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
         }
         return SecurityUtils.checkIfActive(userAuth, user, false);
+    }
+
+    /**
+     * 更新metaTenantUser与用户的关联
+     * @author: zhouzhizhen
+     */
+    public static void bindMetaTenantUser(String phone, String userId, int joinStatus) {
+        Map<String, Object> terms = new HashMap<>();
+        terms.put("phone", phone);
+        terms.put("joinStatus", joinStatus);
+        List<MetaTenantUser> tenantUsers = Para.getDAO().findTerms("metaTenantUser", terms, true);
+        if (tenantUsers != null && !tenantUsers.isEmpty()) {
+            for (MetaTenantUser tenantUser : tenantUsers) {
+                tenantUser.setUserId(userId);
+            }
+            Para.getDAO().updateAll(tenantUsers);
+        }
     }
 
     private boolean checkVcode(String appid, String phone, String vcode) {
