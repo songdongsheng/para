@@ -3,7 +3,6 @@ package com.erudika.para.security.filters;
 import cn.abrain.baas.rbac.entity.VerificationCode;
 import com.erudika.para.Para;
 import com.erudika.para.core.App;
-import com.erudika.para.core.ParaObject;
 import com.erudika.para.core.Sysprop;
 import com.erudika.para.core.User;
 import com.erudika.para.core.utils.CoreUtils;
@@ -13,7 +12,6 @@ import com.erudika.para.security.AuthenticatedUserDetails;
 import com.erudika.para.security.SecurityUtils;
 import com.erudika.para.security.UserAuthentication;
 import com.erudika.para.utils.Config;
-import com.erudika.para.utils.Pager;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang3.StringUtils;
@@ -122,23 +120,14 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
             String appid = request.getParameter(Config._APPID);
             App app = Para.getDAO().read(App.id(appid == null ? Config.getRootAppIdentifier() : appid));
 
-            //校验验证码时否有效
-            Map<String,Object> terms = new HashMap<>();
-            terms.put("phone",phone);
-            terms.put("vcode",authCode);
-            List<ParaObject> verificationCodes = Para.getDAO().findTerms("verificationCode",terms,true,new Pager(1));
-            if( verificationCodes != null &&!verificationCodes.isEmpty() ){
+            try{
+                //验证码通过
+                userAuth = getOrCreateUser( app,phone );
 
-                try{
-
-                    //验证码通过
-                    userAuth = getOrCreateUser( app,phone );
-
-                } catch (Exception e) {
-                    logger.warn("verificationcode auth request failed ", e);
-                }
-
+            } catch (Exception e) {
+                logger.warn("verificationcode auth request failed ", e);
             }
+
         }
         return SecurityUtils.checkIfActive( userAuth, SecurityUtils.getAuthenticatedUser(userAuth), true );
     }
@@ -207,11 +196,12 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
     private boolean checkVcode(String appid, String phone, String vcode) {
         long time = System.currentTimeMillis();
 
+        //校验验证码时否有效
         Map<String, Object> terms = new HashMap<>();
         terms.put("active", "true");
         terms.put("phone", phone);
         terms.put("vCode", vcode);
-        List<VerificationCode> vcs = Para.getSearch().findTerms(appid, "verificationCode", terms, true);
+        List<VerificationCode> vcs = Para.getDAO().findTerms(appid, "verificationCode", terms, true);
 
 		if(vcs==null || vcs.size()<=0){
 			return false;
