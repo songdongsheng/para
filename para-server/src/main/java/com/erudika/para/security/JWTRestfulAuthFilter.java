@@ -149,8 +149,17 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 							return true;
 						}
 					} else {
-						RestUtils.returnStatusResponse(response, HttpServletResponse.SC_BAD_REQUEST,
-								"Failed to authenticate user with '" + provider + "'. Check if user is active.");
+						String message = "Failed to authenticate user with '" + provider + "'. Check if user is active.";
+
+						if( "verificationcode".equalsIgnoreCase(provider) ){
+							message = "手机号或验证码不正确，请重新输入!";
+						} else if( "password".equalsIgnoreCase(provider) ){
+							message = "账号或密码不正确，请重新输入!";
+						} else if( "wechat".equalsIgnoreCase(provider) ){
+							message = "微信验证失败,请重新尝试!";
+						}
+
+						RestUtils.returnStatusResponse( response, HttpServletResponse.SC_BAD_REQUEST,message );
 						return false;
 					}
 				} else {
