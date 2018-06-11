@@ -1,6 +1,7 @@
 package com.erudika.para.security.filters;
 
 import cn.abrain.baas.rbac.entity.MetaTenantUser;
+import cn.abrain.baas.rbac.entity.MetaUser;
 import cn.abrain.baas.rbac.entity.VerificationCode;
 import com.erudika.para.Para;
 import com.erudika.para.core.App;
@@ -13,6 +14,7 @@ import com.erudika.para.security.AuthenticatedUserDetails;
 import com.erudika.para.security.SecurityUtils;
 import com.erudika.para.security.UserAuthentication;
 import com.erudika.para.utils.Config;
+import com.erudika.para.utils.Utils;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang3.StringUtils;
@@ -142,6 +144,7 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
     public UserAuthentication getOrCreateUser( App app,String accessToken ) throws IOException {
         UserAuthentication userAuth = null;
         User user = new User();
+        Sysprop metaUser = null;
 
         if (accessToken != null && accessToken.contains(Config.SEPARATOR)) {
             String[] parts = accessToken.split(Config.SEPARATOR, 3);
@@ -160,42 +163,74 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
             map.put("phone", phone);
             List<Sysprop> metaUsers = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaUser", map, true);
             if (metaUsers != null && !metaUsers.isEmpty()) {
-                Sysprop metaUser = metaUsers.get(0);
-
-                map.clear();
-                map.put("id", metaUser.getParentid());
-                List<User> users = CoreUtils.getInstance().getDao().findTerms(app.getAppid(), "user", map, true);
-                if (users != null && !users.isEmpty()) {
-                    user = users.get(0);
-                    if (!user.getActive()) {
-                        user.setActive(true);
-                        user.update();
-                    }
-                }
+                metaUser = metaUsers.get(0);
 
                 //判断是否激活
                 if (!metaUser.isActive()) {
+                    user = CoreUtils.getInstance().getDao().read(metaUser.getParentid());
+
+                    String activeTenantId = ParaObjectUtils.getPropertyAsString(metaUser, "activeTenantId");
+
+                    // 查询该用户的邀请信息，若不存在邀请信息时则补全邀请信息
+                    MetaTenantUser tenantUser = new MetaTenantUser();
+                    tenantUser.setUserId(metaUser.getParentid());
+                    tenantUser.setTenantId(activeTenantId);
+
+                    tenantUser = getMetaTenantUser(app, phone, activeTenantId, metaUser, tenantUser);
+                    tenantUser.setJoinStatus(0);
+
                     metaUser.setActive(true);
+                    user.setActive(true);
+                    user.update();
                     metaUser.update();
+                    tenantUser.update();
                 }
 
             } else {
                 // 查询该手机号未绑定用户时自动根据手机号注册账号
-                Sysprop metaUser = createUser(app, phone, user);
+                metaUser = createUser(app, phone, user);
                 String mid = metaUser.getId();
                 if (mid == null) {
                     user.delete();
                     throw new AuthenticationServiceException("Authentication failed: cannot create new metaUser.");
-                } else {
-                    // 绑定邀请信息
-                    // 场景：当该登录用户为手机验证码登录自动注册的用户时，查询该用户在注册前是否存在邀请信息，存在则进行绑定
-                    bindMetaTenantUser(phone, metaUser.getParentid(), 4);
                 }
+            }
+            if (metaUser != null) {
+                // 绑定邀请信息
+                // 场景：当该登录用户为手机验证码登录自动注册的用户时，查询该用户在注册前是否存在邀请信息，存在则进行绑定
+                bindMetaTenantUser(phone, metaUser.getParentid(), 4);
             }
             userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
         }
         return SecurityUtils.checkIfActive(userAuth, user, false);
     }
+
+    /**
+     * 激活账号时判断用户是否存在已绑定的邀请信息
+     * 若存在则返回该邀请信息，不存在则创建
+     * @author: zhouzhizhen
+     */
+    private MetaTenantUser getMetaTenantUser(App app, String phone, String activeTenantId, Sysprop metaUser, MetaTenantUser tenantUser) {
+        HashMap<String, String> map;
+        map = new HashMap<>();
+        map.put("userId", tenantUser.getUserId());
+        map.put("tenantId",tenantUser.getTenantId());
+        List<MetaTenantUser> tenantUsers = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaTenantUser", map, true);
+        if(tenantUsers==null || tenantUsers.isEmpty()){
+            tenantUser = new MetaTenantUser();
+            tenantUser.setId(Utils.getNewId());
+            tenantUser.setCreatorid(metaUser.getParentid());
+            tenantUser.setUpdaterid(metaUser.getParentid());
+            tenantUser.setTenantId(activeTenantId);
+            tenantUser.setUserId(metaUser.getParentid());
+            tenantUser.setName(metaUser.getName());
+            tenantUser.setPhone(phone);
+        } else {
+            tenantUser = tenantUsers.get(0);
+        }
+        return tenantUser;
+    }
+
 
     /**
      * 更新metaTenantUser与用户的关联
