@@ -165,9 +165,11 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
             if (metaUsers != null && !metaUsers.isEmpty()) {
                 metaUser = metaUsers.get(0);
 
+                // 获取user对象
+                user = CoreUtils.getInstance().getDao().read(metaUser.getParentid());
+
                 //判断是否激活
                 if (!metaUser.isActive()) {
-                    user = CoreUtils.getInstance().getDao().read(metaUser.getParentid());
 
                     String activeTenantId = ParaObjectUtils.getPropertyAsString(metaUser, "activeTenantId");
 
