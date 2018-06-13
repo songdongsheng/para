@@ -204,6 +204,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			http.addFilterAfter(passwordFilter, BasicAuthenticationFilter.class);
 		}
 
+        if (wechatAuthFilter != null) {
+            wechatAuthFilter.setAuthenticationManager(authenticationManager());
+            http.addFilterAfter(wechatAuthFilter, BasicAuthenticationFilter.class);
+        }
+
+        if (verificationCodeAuthFilter != null) {
+            verificationCodeAuthFilter.setAuthenticationManager(authenticationManager());
+            http.addFilterAfter(verificationCodeAuthFilter, BasicAuthenticationFilter.class);
+        }
+
 		if (openidFilter != null) {
 			openidFilter.setAuthenticationManager(authenticationManager());
 			http.addFilterAfter(openidFilter, BasicAuthenticationFilter.class);
@@ -219,6 +229,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			http.addFilterAfter(googleFilter, BasicAuthenticationFilter.class);
 		}
 
+        if (githubFilter != null) {
+            githubFilter.setAuthenticationManager(authenticationManager());
+            http.addFilterAfter(githubFilter, BasicAuthenticationFilter.class);
+        }
+
 		if (linkedinFilter != null) {
 			linkedinFilter.setAuthenticationManager(authenticationManager());
 			http.addFilterAfter(linkedinFilter, BasicAuthenticationFilter.class);
@@ -227,11 +242,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		if (twitterFilter != null) {
 			twitterFilter.setAuthenticationManager(authenticationManager());
 			http.addFilterAfter(twitterFilter, BasicAuthenticationFilter.class);
-		}
-
-		if (githubFilter != null) {
-			githubFilter.setAuthenticationManager(authenticationManager());
-			http.addFilterAfter(githubFilter, BasicAuthenticationFilter.class);
 		}
 
 		if (microsoftFilter != null) {
@@ -248,16 +258,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			ldapFilter.setAuthenticationManager(authenticationManager());
 			http.addFilterAfter(ldapFilter, BasicAuthenticationFilter.class);
 		}
-
-		if (wechatAuthFilter != null) {
-			wechatAuthFilter.setAuthenticationManager(authenticationManager());
-			http.addFilterAfter(wechatAuthFilter, BasicAuthenticationFilter.class);
-		}
-
-		if (verificationCodeAuthFilter != null) {
-		    verificationCodeAuthFilter.setAuthenticationManager(authenticationManager());
-		    http.addFilterAfter(verificationCodeAuthFilter, BasicAuthenticationFilter.class);
-        }
 	}
 
 	private void parseProtectedResources(HttpSecurity http, ConfigObject protectedResources) throws Exception {

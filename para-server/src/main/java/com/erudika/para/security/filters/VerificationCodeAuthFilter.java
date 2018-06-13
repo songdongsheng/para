@@ -1,7 +1,6 @@
 package com.erudika.para.security.filters;
 
 import cn.abrain.baas.rbac.entity.MetaTenantUser;
-import cn.abrain.baas.rbac.entity.MetaUser;
 import cn.abrain.baas.rbac.entity.VerificationCode;
 import com.erudika.para.Para;
 import com.erudika.para.core.App;
@@ -116,21 +115,21 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
             String authCode = request.getParameter("code");
             String phone = request.getParameter("phone");
 
-            if (StringUtils.isBlank(authCode)) {
-                logger.warn("wechat auth request failed: the required query parameters 'code', are missing.");
+            if (StringUtils.isNotBlank(authCode)) {
+                String appid = request.getParameter(Config._APPID);
+                App app = Para.getDAO().read(App.id(appid == null ? Config.getRootAppIdentifier() : appid));
+
+                try{
+                    String accessToken = phone+"::"+authCode;
+                    //验证码通过
+                    userAuth = getOrCreateUser( app, accessToken );
+
+                } catch (Exception e) {
+                    logger.warn("verificationcode auth request failed ", e);
+                }
+            } else {
+                logger.warn("verificationCode auth request failed: the required query parameters 'code', are missing.");
             }
-
-            String appid = request.getParameter(Config._APPID);
-            App app = Para.getDAO().read(App.id(appid == null ? Config.getRootAppIdentifier() : appid));
-
-            try{
-                //验证码通过
-                userAuth = getOrCreateUser( app,phone );
-
-            } catch (Exception e) {
-                logger.warn("verificationcode auth request failed ", e);
-            }
-
         }
         return SecurityUtils.checkIfActive( userAuth, SecurityUtils.getAuthenticatedUser(userAuth), true );
     }
@@ -152,6 +151,10 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
             String name = parts[1];
             String vcode = (parts.length > 2) ? parts[2] : "";
 
+            if (StringUtils.isBlank(phone)) {
+                logger.warn("手机号：" + phone + " 不允许为空");
+                return null;
+            }
             if (StringUtils.isBlank(vcode) || !checkVcode(app.getAppIdentifier(), phone, vcode)) {
 //                throw new AuthenticationServiceException("验证码输入有误");
                 logger.warn("验证码:"+vcode+" 输入错误或已失效!");
@@ -186,6 +189,10 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
                     user.update();
                     metaUser.update();
                     tenantUser.update();
+
+                    // 绑定邀请信息
+                    // 场景：当该登录用户为手机验证码登录自动注册的用户时，查询该用户在注册前是否存在邀请信息，存在则进行绑定
+                    bindMetaTenantUser(phone, metaUser.getParentid(), 4);
                 }
 
             } else {
@@ -196,8 +203,7 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
                     user.delete();
                     throw new AuthenticationServiceException("Authentication failed: cannot create new metaUser.");
                 }
-            }
-            if (metaUser != null) {
+
                 // 绑定邀请信息
                 // 场景：当该登录用户为手机验证码登录自动注册的用户时，查询该用户在注册前是否存在邀请信息，存在则进行绑定
                 bindMetaTenantUser(phone, metaUser.getParentid(), 4);
