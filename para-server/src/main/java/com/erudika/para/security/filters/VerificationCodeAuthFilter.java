@@ -281,6 +281,7 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
 
     private Sysprop createUser(App app, String phone, User user) {
         //user is new
+        user.setName(phone);
         user.setActive(true);
         user.setAppid(getAppid(app));
         user.setGroups(User.Groups.ADMINS.toString());
