@@ -155,14 +155,17 @@ public class PasswordAuthFilter extends AbstractAuthenticationProcessingFilter {
 							SecurityUtils.setTenantInfo(user, mu);
 							userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
 							return SecurityUtils.checkIfActive(userAuth, user, false);
-						}
-						logger.error("User '" + email + "' password not match");
-						return null;
-					}
-				}
+						} else {
+                            logger.error("User '" + email + "' password not match");
+							throw new RuntimeException("账号或密码不正确，请重新输入!");
 
-				logger.error("User '" + email + "' not found");
-				return null;
+						}
+					}
+				} else {
+                    logger.error("User '" + email + "' not found");
+                    throw new RuntimeException("账号不存在!");
+
+                }
 			}
 
 			// NOTE TO SELF:
@@ -184,11 +187,16 @@ public class PasswordAuthFilter extends AbstractAuthenticationProcessingFilter {
 				}
 			} else if (user == null) {
 				logger.error("User '" + email + "' not auto registered");
-				return null;
+                throw new RuntimeException("账号不存在!");
+//				return null;
 			} else if (user.getActive() && User.passwordMatches(u)) {
 				SecurityUtils.setTenantInfo(user);
 				userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
-			}
+			} else {
+                logger.error("User '" + email + "' password not match");
+                throw new RuntimeException("账号或密码不正确，请重新输入!");
+
+            }
 		}
 		return SecurityUtils.checkIfActive(userAuth, user, false);
 	}

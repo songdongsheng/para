@@ -169,6 +169,7 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                 ctype = resp2.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue();
             } catch (IOException e) {
                 logger.warn("Wechat auth request failed: GET " + url, e);
+                throw new RuntimeException("微信验证失败,请重新尝试!");
             }
 
             if (respEntity != null && StringUtils.equals("text/plain", ctype)) {

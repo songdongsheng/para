@@ -139,28 +139,26 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 				App app = Para.getDAO().read(App.id(appid));
 				if (app != null) {
 					response.setHeader("APP_ID", app.getAppIdentifier());
-					UserAuthentication userAuth = getOrCreateUser(app, provider, token);
-					User user = SecurityUtils.getAuthenticatedUser(userAuth);
-					if (user != null && user.getActive()) {
-						// issue token
-						SignedJWT newJWT = SecurityUtils.generateJWToken(user, app);
-						if (newJWT != null) {
-							succesHandler(response, user, newJWT);
-							return true;
-						}
-					} else {
-						String message = "Failed to authenticate user with '" + provider + "'. Check if user is active.";
+					try {
+						UserAuthentication userAuth = getOrCreateUser(app, provider, token);
+						User user = SecurityUtils.getAuthenticatedUser(userAuth);
+						if (user != null && user.getActive()) {
+                            // issue token
+                            SignedJWT newJWT = SecurityUtils.generateJWToken(user, app);
+                            if (newJWT != null) {
+                                succesHandler(response, user, newJWT);
+                                return true;
+                            }
+                        } else {
+                            String message = "Failed to authenticate user with '" + provider + "'. Check if user is active.";
 
-						if( "verificationcode".equalsIgnoreCase(provider) ){
-							message = "手机号或验证码不正确，请重新输入!";
-						} else if( "password".equalsIgnoreCase(provider) ){
-							message = "账号或密码不正确，请重新输入!";
-						} else if( "wechat".equalsIgnoreCase(provider) ){
-							message = "微信验证失败,请重新尝试!";
-						}
-
-						RestUtils.returnStatusResponse( response, HttpServletResponse.SC_BAD_REQUEST,message );
+                            RestUtils.returnStatusResponse( response, HttpServletResponse.SC_BAD_REQUEST,message );
+                            return false;
+                        }
+					} catch (Exception e) {
+						RestUtils.returnStatusResponse( response, HttpServletResponse.SC_BAD_REQUEST, e.getMessage() );
 						return false;
+
 					}
 				} else {
 					RestUtils.returnStatusResponse(response, HttpServletResponse.SC_BAD_REQUEST,

@@ -154,13 +154,15 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
             String vcode = (parts.length > 2) ? parts[2] : "";
 
             if (StringUtils.isBlank(phone)) {
-                logger.warn("手机号：" + phone + " 不允许为空");
-                return null;
+                throw new RuntimeException("手机号不允许为空");
             }
-            if (StringUtils.isBlank(vcode) || !checkVcode(app.getAppIdentifier(), phone, vcode)) {
-//                throw new AuthenticationServiceException("验证码输入有误");
+            if (StringUtils.isBlank(vcode)) {
+                throw new RuntimeException("请输入验证码");
+
+            } else if (!checkVcode(app.getAppIdentifier(), phone, vcode)) {
                 logger.warn("验证码:"+vcode+" 输入错误或已失效!");
-                return null;
+                throw new RuntimeException("验证码输入有误!");
+
             }
 
             // 查询用户是否已注册
