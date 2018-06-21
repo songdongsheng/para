@@ -16,11 +16,13 @@ import com.erudika.para.utils.Config;
 import com.erudika.para.utils.Utils;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.nimbusds.jwt.SignedJWT;
+import info.songdongsheng.be.BaasSearchUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.elasticsearch.action.admin.indices.flush.FlushRequest;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.Authentication;
@@ -208,6 +210,10 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
                 // 场景：当该登录用户为手机验证码登录自动注册的用户时，查询该用户在注册前是否存在邀请信息，存在则进行绑定
                 bindMetaTenantUser(phone, metaUser.getParentid(), 4);
             }
+
+            // 必须先刷新 ES，不然可能导致后续查询不到数据
+            BaasSearchUtil.getClient().admin().indices().flush(new FlushRequest(app.getAppIdentifier())).actionGet();
+
             userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
         }
         return SecurityUtils.checkIfActive(userAuth, user, false);

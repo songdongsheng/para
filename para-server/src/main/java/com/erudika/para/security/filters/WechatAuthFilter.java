@@ -14,6 +14,7 @@ import com.erudika.para.utils.Config;
 import com.erudika.para.utils.Utils;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.nimbusds.jwt.SignedJWT;
+import info.songdongsheng.be.BaasSearchUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
@@ -22,6 +23,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.elasticsearch.action.admin.indices.flush.FlushRequest;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.Authentication;
@@ -211,8 +213,8 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                                 mu.update();
                             }
                             SecurityUtils.setTenantInfo(user, mu);
-                            userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
-                            return SecurityUtils.checkIfActive(userAuth, user, false);
+//                            userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
+//                            return SecurityUtils.checkIfActive(userAuth, user, false);
                         }
                     } else {
                         // 查询该微信号未绑定用户时自动根据微信号注册账号
@@ -223,16 +225,21 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                             throw new AuthenticationServiceException("Authentication failed: cannot create new metaUser.");
                         }
                     }
-                    userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
                 }
-                EntityUtils.consumeQuietly(respEntity);
             }
+            EntityUtils.consumeQuietly(respEntity);
+
+            // 必须先刷新 ES，不然可能导致后续查询不到数据
+            BaasSearchUtil.getClient().admin().indices().flush(new FlushRequest(app.getAppIdentifier())).actionGet();
+
+            userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
         }
         return SecurityUtils.checkIfActive(userAuth, user, false);
     }
 
     private Sysprop createUser(App app, String name, String pic, String unionid, String sex, User user) {
         //user is new
+        user.setName(name);
         user.setActive(true);
         user.setAppid(getAppid(app));
 //        user.setEmail(StringUtils.isBlank(email) ? unionid + "@github.com" : email);
