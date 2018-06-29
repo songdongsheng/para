@@ -437,6 +437,8 @@ public final class ParaObjectUtils {
 					s.addAll(s2);
 				}
 
+				s.addAll(SCANNER.getComponentClasses("cn.abrain.baas.met.entity"));
+
 				for (Class<? extends ParaObject> coreClass : s) {
 					boolean isAbstract = Modifier.isAbstract(coreClass.getModifiers());
 					boolean isInterface = Modifier.isInterface(coreClass.getModifiers());
@@ -458,19 +460,22 @@ public final class ParaObjectUtils {
 			return "";
 		}
 
+		String fullName = coreClass.getName();
 		String simpleName = coreClass.getSimpleName();
-		if(coreClass.getName().startsWith("cn.abrain.baas.rbac.entity.ldc")){
+		if(fullName.startsWith("cn.abrain.baas.rbac.entity.ldc")) {
 			char[] chars = simpleName.toCharArray();
 			StringBuffer sb = new StringBuffer();
 			for (char c : chars) {
-				if(Character.isUpperCase(c)){
+				if (Character.isUpperCase(c)) {
 					sb.append("_").append(c);
-				}else{
+				} else {
 					sb.append(Character.toUpperCase(c));
 				}
 			}
 			return sb.substring(1, sb.length());
-		}else if (coreClass.getName().startsWith("cn.abrain")) {
+		} else  if (fullName.startsWith("cn.abrain.baas.met.entity")) {
+			return simpleName;
+		} else if (fullName.startsWith("cn.abrain")) {
 			char[] chars = simpleName.toCharArray();
 			chars[0] = Character.toLowerCase(chars[0]);
 			return new String(chars);

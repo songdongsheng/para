@@ -12,16 +12,17 @@ public class DBLoggerAppender extends UnsynchronizedAppenderBase<IAccessEvent> {
     private static final DruidDataSource dataSource;
 
     static {
-        String dialectName = Config.getConfigParam("jdbc.dialect", "sqlite");
+        String jdbcUrl = Config.getConfigParam("jdbc.url", "jdbc:sqlite:sqlite.db");
         dataSource = new DruidDataSource();
-        dataSource.setUrl(Config.getConfigParam("jdbc.url", "jdbc:sqlite:sqlite.db"));
+        dataSource.setUrl(jdbcUrl);
         dataSource.setUsername(Config.getConfigParam("jdbc.username", ""));
         dataSource.setPassword(Config.getConfigParam("jdbc.password", ""));
         dataSource.setInitialSize(Config.getConfigInt("jdbc.initial_size", 1));
         dataSource.setMaxActive(Config.getConfigInt("jdbc.max_active", 16));
         dataSource.setMaxWait(Config.getConfigInt("jdbc.max_wait", 5000));
         dataSource.setTestWhileIdle(false);
-        if ("oracle".equalsIgnoreCase(dialectName)) {
+
+        if (StringUtils.startsWith(jdbcUrl, "jdbc:oracle://")) {
             dataSource.setPoolPreparedStatements(true);
         }
     }

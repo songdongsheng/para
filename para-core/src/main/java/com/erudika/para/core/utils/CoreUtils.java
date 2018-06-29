@@ -33,6 +33,8 @@ import com.erudika.para.search.Search;
 import com.erudika.para.utils.Config;
 import com.erudika.para.utils.Pager;
 import com.erudika.para.utils.Utils;
+
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -44,6 +46,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
+
+import org.apache.commons.beanutils.BeanUtilsBean;
+import org.apache.commons.beanutils.converters.BigDecimalConverter;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +83,8 @@ public enum CoreUtils implements InitializeListener {
 
 		@Override
 		public void onInitialize() {
+			BeanUtilsBean.getInstance().getConvertUtils().register(new BigDecimalConverter(BigDecimal.ZERO), BigDecimal.class);
+
 			// switch to the real DAO, Search and Cache implementations at runtime
 			if (dao != null && search != null && cache != null) {
 				logger.info("Loaded new DAO, Search and Cache implementations - {}, {} and {}.",
