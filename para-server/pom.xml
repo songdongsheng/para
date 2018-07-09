@@ -308,49 +308,49 @@
 		<dependency>
 			<groupId>com.alibaba</groupId>
 			<artifactId>druid</artifactId>
-			<version>1.1.8</version>
+			<version>1.1.10</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-			<version>24.0-jre</version>
+			<version>25.1-jre</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-to-slf4j</artifactId>
-			<version>2.10.0</version>
+			<version>2.11.0</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.elasticsearch.client</groupId>
 			<artifactId>transport</artifactId>
-			<version>5.6.8</version>
+			<version>5.6.10</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.mariadb.jdbc</groupId>
 			<artifactId>mariadb-java-client</artifactId>
-			<version>2.2.2</version>
+			<version>2.2.5</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.mozilla</groupId>
 			<artifactId>rhino</artifactId>
-			<version>1.7.8</version>
+			<version>1.7.10</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
-			<version>42.2.1</version>
+			<version>42.2.2</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.xerial</groupId>
 			<artifactId>sqlite-jdbc</artifactId>
-			<version>3.21.0.1</version>
+			<version>3.23.1</version>
 		</dependency>
 
 		<dependency>
@@ -362,7 +362,7 @@
 		<dependency>
 		  <groupId>com.datastax.cassandra</groupId>
 		  <artifactId>cassandra-driver-core</artifactId>
-		  <version>3.4.0</version>
+		  <version>3.5.1</version>
 		</dependency>
 	</dependencies>
 
