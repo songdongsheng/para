@@ -220,4 +220,13 @@ public class MockSearch implements Search {
 		throw new UnsupportedOperationException("Not implemented.");
 	}
 
+	@Override
+	public void flush() {
+		throw new UnsupportedOperationException("Not implemented.");
+	}
+
+	@Override
+	public void flush(String appid) {
+		throw new UnsupportedOperationException("Not implemented.");
+	}
 }

@@ -408,4 +408,9 @@ public interface Search {
 	 */
 	Long getCount(String appid, String type, Map<String, ?> terms);
 
+	// 刷新默认索引
+	void flush();
+
+	// 刷新指定索引
+	void flush(String appid);
 }

@@ -1,7 +1,5 @@
 package com.erudika.para.security.filters;
 
-import cn.abrain.baas.rbac.entity.MetaTenantUser;
-import cn.abrain.baas.rbac.entity.VerificationCode;
 import com.erudika.para.Para;
 import com.erudika.para.core.App;
 import com.erudika.para.core.Sysprop;
@@ -16,13 +14,11 @@ import com.erudika.para.utils.Config;
 import com.erudika.para.utils.Utils;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.nimbusds.jwt.SignedJWT;
-import info.songdongsheng.be.BaasSearchUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.elasticsearch.action.admin.indices.flush.FlushRequest;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.Authentication;
@@ -181,12 +177,12 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
                     String activeTenantId = ParaObjectUtils.getPropertyAsString(metaUser, "activeTenantId");
 
                     // 查询该用户的邀请信息，若不存在邀请信息时则补全邀请信息
-                    MetaTenantUser tenantUser = new MetaTenantUser();
-                    tenantUser.setUserId(metaUser.getParentid());
-                    tenantUser.setTenantId(activeTenantId);
+                    Sysprop tenantUser = ParaObjectUtils.newParaObjectInstance("MetaTenantUser");
+                    ParaObjectUtils.setProperty(tenantUser, "userId", metaUser.getParentid());
+                    ParaObjectUtils.setProperty(tenantUser, "tenantId", activeTenantId);
 
                     tenantUser = getMetaTenantUser(app, phone, activeTenantId, metaUser, tenantUser);
-                    tenantUser.setJoinStatus(0);
+                    ParaObjectUtils.setProperty(tenantUser, "joinStatus", Integer.valueOf(0));
 
                     metaUser.setActive(true);
                     user.setActive(true);
@@ -214,7 +210,7 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
             }
 
             // 必须先刷新 ES，不然可能导致后续查询不到数据
-            BaasSearchUtil.getClient().admin().indices().flush(new FlushRequest(app.getAppIdentifier())).actionGet();
+            CoreUtils.getInstance().getSearch().flush(app.getAppIdentifier());
 
             userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
         }
@@ -226,21 +222,21 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
      * 若存在则返回该邀请信息，不存在则创建
      * @author: zhouzhizhen
      */
-    private MetaTenantUser getMetaTenantUser(App app, String phone, String activeTenantId, Sysprop metaUser, MetaTenantUser tenantUser) {
-        HashMap<String, String> map;
-        map = new HashMap<>();
-        map.put("userId", tenantUser.getUserId());
-        map.put("tenantId",tenantUser.getTenantId());
-        List<MetaTenantUser> tenantUsers = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaTenantUser", map, true);
+    private Sysprop getMetaTenantUser(App app, String phone, String activeTenantId, Sysprop metaUser, Sysprop tenantUser) {
+        HashMap<String, String> map = new HashMap<>();
+        map.put("userId", ParaObjectUtils.getPropertyAsString(tenantUser, "userId"));
+        map.put("tenantId", ParaObjectUtils.getPropertyAsString(tenantUser, "tenantId"));
+        List<Sysprop> tenantUsers = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaTenantUser", map, true);
         if(tenantUsers==null || tenantUsers.isEmpty()){
-            tenantUser = new MetaTenantUser();
+            tenantUser = ParaObjectUtils.newParaObjectInstance("MetaTenantUser");
             tenantUser.setId(Utils.getNewId());
             tenantUser.setCreatorid(metaUser.getParentid());
             tenantUser.setUpdaterid(metaUser.getParentid());
-            tenantUser.setTenantId(activeTenantId);
-            tenantUser.setUserId(metaUser.getParentid());
             tenantUser.setName(metaUser.getName());
-            tenantUser.setPhone(phone);
+
+            ParaObjectUtils.setProperty(tenantUser, "tenantId", activeTenantId);
+            ParaObjectUtils.setProperty(tenantUser, "userId", metaUser.getParentid());
+            ParaObjectUtils.setProperty(tenantUser, "phone", phone);
         } else {
             tenantUser = tenantUsers.get(0);
         }
@@ -256,10 +252,10 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
         Map<String, Object> terms = new HashMap<>();
         terms.put("phone", phone);
         terms.put("joinStatus", joinStatus);
-        List<MetaTenantUser> tenantUsers = Para.getDAO().findTerms("metaTenantUser", terms, true);
+        List<Sysprop> tenantUsers = Para.getDAO().findTerms("metaTenantUser", terms, true);
         if (tenantUsers != null && !tenantUsers.isEmpty()) {
-            for (MetaTenantUser tenantUser : tenantUsers) {
-                tenantUser.setUserId(userId);
+            for (Sysprop tenantUser : tenantUsers) {
+                ParaObjectUtils.setProperty(tenantUser, "userId", userId);
             }
             Para.getDAO().updateAll(tenantUsers);
         }
@@ -273,12 +269,12 @@ public class VerificationCodeAuthFilter extends AbstractAuthenticationProcessing
         terms.put("active", "true");
         terms.put("phone", phone);
         terms.put("vCode", vcode);
-        List<VerificationCode> vcs = Para.getDAO().findTerms(appid, "verificationCode", terms, true);
+        List<Sysprop> vcs = Para.getDAO().findTerms(appid, "verificationCode", terms, true);
 
 		if(vcs==null || vcs.size()<=0){
 			return false;
 		}
-		VerificationCode vc = vcs.get(0);
+        Sysprop vc = vcs.get(0);
 		if(time-vc.getTimestamp()>(10*60*1000)){
 			vc.delete();
 			return false;

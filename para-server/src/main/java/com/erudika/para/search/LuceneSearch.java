@@ -326,6 +326,16 @@ public class LuceneSearch implements Search {
 		return (long) count(appid, query);
 	}
 
+	@Override
+	public void flush() {
+		throw new UnsupportedOperationException("Not implemented.");
+	}
+
+	@Override
+	public void flush(String appid) {
+		throw new UnsupportedOperationException("Not implemented.");
+	}
+
 	//////////////////////////////////////////////////////////////
 
 	@Override

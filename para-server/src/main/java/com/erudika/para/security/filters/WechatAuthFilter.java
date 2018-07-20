@@ -14,7 +14,6 @@ import com.erudika.para.utils.Config;
 import com.erudika.para.utils.Utils;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.nimbusds.jwt.SignedJWT;
-import info.songdongsheng.be.BaasSearchUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
@@ -23,7 +22,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.elasticsearch.action.admin.indices.flush.FlushRequest;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.Authentication;
@@ -231,7 +229,7 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
             EntityUtils.consumeQuietly(respEntity);
 
             // 必须先刷新 ES，不然可能导致后续查询不到数据
-            BaasSearchUtil.getClient().admin().indices().flush(new FlushRequest(app.getAppIdentifier())).actionGet();
+            CoreUtils.getInstance().getSearch().flush(app.getAppIdentifier());
 
             userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
         }
