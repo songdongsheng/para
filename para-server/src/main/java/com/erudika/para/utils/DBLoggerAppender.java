@@ -6,10 +6,11 @@ import com.alibaba.druid.pool.DruidDataSource;
 import org.apache.commons.lang3.StringUtils;
 
 import java.sql.*;
+import java.util.*;
 
 public class DBLoggerAppender extends UnsynchronizedAppenderBase<IAccessEvent> {
-
     private static final DruidDataSource dataSource;
+    private static final Set<String> methods = new HashSet<>(Arrays.asList("GET", "POST", "DELETE", "PATCH", "PUT"));
 
     static {
         String jdbcUrl = Config.getConfigParam("jdbc.url", "jdbc:sqlite:sqlite.db");
@@ -29,11 +30,16 @@ public class DBLoggerAppender extends UnsynchronizedAppenderBase<IAccessEvent> {
 
     @Override
     protected void append(IAccessEvent event) {
+        // 只记录合法 API 调用
+        if (!methods.contains(event.getMethod()) || !(event instanceof JwtAccessEvent)) return;
+        JwtAccessEvent jwt = (JwtAccessEvent) event;
+        if (StringUtils.isEmpty(jwt.getRemoteUser())) return;
+
         String insertSQL = "INSERT INTO META_API_LOG (ID, APP_ID, TENANT_ID, ACCESS_TIME, REMOTE_USER, REMOTE_HOST, REQUEST_HOST, REQUEST_METHOD, REQUEST_PATH, API_IDENTIFIER, QUERY_STRING, REQUEST_REFERER, USER_AGENT, STATUS_CODE, PROCESS_TIME, REQUEST_CONTENT_LENGTH, REQUEST_CONTENT, RESPONSE_CONTENT_LENGTH, RESPONSE_CONTENT) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection cn = getConnection()) {
             cn.setAutoCommit(true);
             try (PreparedStatement ps = cn.prepareStatement(insertSQL)) {
-                addAccessEvent(ps, event);
+                addAccessEvent(ps, jwt);
                 int updateCount = ps.executeUpdate();
                 if (updateCount != 1) {
                     addWarn("Failed to insert access event");
@@ -48,32 +54,29 @@ public class DBLoggerAppender extends UnsynchronizedAppenderBase<IAccessEvent> {
         return dataSource.getConnection();
     }
 
-    private void addAccessEvent(PreparedStatement stmt, IAccessEvent event) throws SQLException {
-        if (event instanceof JwtAccessEvent) {
-            JwtAccessEvent jwt = (JwtAccessEvent) event;
-            stmt.setString(1, Utils.getNewId());
-            stmt.setString(2, Config.getRootAppIdentifier());
-            stmt.setString(3, jwt.getTenantId());
-            stmt.setTimestamp(4, new Timestamp(jwt.getRequestTime()));
-            stmt.setString(5, jwt.getRemoteUser());
-            stmt.setString(6, jwt.getRemoteHost());
-            stmt.setString(7, jwt.getRequestHeader("Host"));
-            stmt.setString(8, jwt.getMethod());
-            stmt.setString(9, jwt.getRequestURI());
-            stmt.setString(10, getApiName(jwt.getRequestURI()));
-            stmt.setString(11, jwt.getQueryString().replace("?", ""));
-            stmt.setString(12, jwt.getRequestHeader("Referer"));
-            stmt.setString(13, jwt.getRequestHeader("User-Agent"));
-            stmt.setInt(14, jwt.getResponse().getStatus());
-            stmt.setLong(15, jwt.getElapsedTime());
-            stmt.setLong(16, jwt.getRequest().getContentLength() < 0 ? 0 : jwt.getRequest().getContentLength());
-            stmt.setString(17, jwt.getRequestContent());
-            stmt.setLong(18, jwt.getContentLength());
-            stmt.setString(19, jwt.getResponseContent());
-        }
+    private void addAccessEvent(PreparedStatement stmt, JwtAccessEvent jwt) throws SQLException {
+        stmt.setString(1, Utils.getNewId());
+        stmt.setString(2, Config.getRootAppIdentifier());
+        stmt.setString(3, jwt.getTenantId());
+        stmt.setTimestamp(4, new Timestamp(jwt.getRequestTime()));
+        stmt.setString(5, jwt.getRemoteUser());
+        stmt.setString(6, jwt.getRemoteHost());
+        stmt.setString(7, jwt.getRequestHeader("Host"));
+        stmt.setString(8, jwt.getMethod());
+        stmt.setString(9, jwt.getRequestURI());
+        stmt.setString(10, getApiName(jwt.getRequestURI()));
+        stmt.setString(11, jwt.getQueryString().replace("?", ""));
+        stmt.setString(12, jwt.getRequestHeader("Referer"));
+        stmt.setString(13, jwt.getRequestHeader("User-Agent"));
+        stmt.setInt(14, jwt.getResponse().getStatus());
+        stmt.setLong(15, jwt.getElapsedTime());
+        stmt.setLong(16, jwt.getRequest().getContentLength() < 0 ? 0 : jwt.getRequest().getContentLength());
+        stmt.setString(17, jwt.getRequestContent());
+        stmt.setLong(18, jwt.getContentLength());
+        stmt.setString(19, jwt.getResponseContent());
     }
 
-    private String getApiName(String uri){
+    private String getApiName(String uri) {
         if (StringUtils.isBlank(uri) || !uri.startsWith("/v1/")) {
             return uri;
         }
