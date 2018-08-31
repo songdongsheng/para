@@ -364,7 +364,12 @@
 		  <artifactId>cassandra-driver-core</artifactId>
 		  <version>3.5.1</version>
 		</dependency>
-	</dependencies>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>1.50</version>
+        </dependency>
+    </dependencies>
 
 	<build>
 		<plugins>

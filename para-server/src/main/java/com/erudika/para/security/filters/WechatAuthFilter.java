@@ -10,6 +10,7 @@ import com.erudika.para.rest.RestUtils;
 import com.erudika.para.security.AuthenticatedUserDetails;
 import com.erudika.para.security.SecurityUtils;
 import com.erudika.para.security.UserAuthentication;
+import com.erudika.para.utils.AES;
 import com.erudika.para.utils.Config;
 import com.erudika.para.utils.Utils;
 import com.fasterxml.jackson.databind.ObjectReader;
@@ -34,12 +35,11 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.text.ParseException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
 
@@ -47,6 +47,7 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
     private final ObjectReader jreader;
     private static final String PROFILE_URL = "https://api.weixin.qq.com/sns/userinfo?access_token={0}&openid={1}";
     private static final String TOKEN_URL = "https://api.weixin.qq.com/sns/oauth2/access_token?appid={0}&secret={1}&code={2}&grant_type={3}";
+    private static final String MINI_URL = "https://api.weixin.qq.com/sns/jscode2session?appid={0}&secret={1}&js_code={2}&grant_type={3}";
     private String openid = "";
 
     /**
@@ -113,32 +114,130 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
     }
 
     @Override
-    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
         final String requestURI = request.getRequestURI();
         UserAuthentication userAuth = null;
 
         if (requestURI.endsWith(WECHAT_ACTION)) {
-            String authCode = request.getParameter("code");
-            if (!StringUtils.isBlank(authCode)) {
+            //2018-08-30 zhouzz 根据请求方式区分登录类型
+            String method = request.getMethod();
+            if ("POST".equalsIgnoreCase(method)) {
+                // 微信小程序登录
+                userAuth = loginMiniProgram(request);
+
+            } else if ("GET".equalsIgnoreCase(method)){
+                //微信二维码登录
+                userAuth = loginWechat(request);
+
+            }
+        }
+        return SecurityUtils.checkIfActive(userAuth, SecurityUtils.getAuthenticatedUser(userAuth), true);
+    }
+
+    private String acceptJSON(HttpServletRequest request){
+        String acceptjson = "";
+        try {
+            BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream(), "UTF-8"));
+            StringBuilder sb = new StringBuilder();
+            String temp;
+            while ((temp = br.readLine()) != null) {
+                sb.append(temp);
+            }
+            br.close();
+            acceptjson = sb.toString();
+        } catch (Exception e) {
+//            e.printStackTrace();
+            logger.error("request date not json.");
+        }
+        return acceptjson;
+    }
+
+    /**
+     * 2018-08-30 zhouzz 微信二维码登录
+     * @param request 请求参数
+     * @return userInfo
+     */
+    private UserAuthentication loginWechat(HttpServletRequest request) {
+        UserAuthentication userAuth = null;
+
+        String authCode = request.getParameter("code");
+        if (!StringUtils.isBlank(authCode)) {
+            String appid = request.getParameter(Config._APPID);
+            App app = Para.getDAO().read(App.id(appid == null ? Config.getRootAppIdentifier() : appid));
+            String grant_type = Config.getConfigParam("wechat_grant_type", "authorization_code");
+            String[] keys = SecurityUtils.getOAuthKeysForApp(app, Config.WECHAT_PREFIX);
+            String url = Utils.formatMessage(TOKEN_URL, keys[0], keys[1], authCode, grant_type);
+            try {
+                HttpGet tokenPost = new HttpGet(url);
+                Map<String, Object> accessToken = parseAccessToken(httpclient.execute(tokenPost));
+                if (accessToken != null && accessToken.containsKey("access_token")) {
+                    String access_token = (String) accessToken.get("access_token");
+                    openid = (String) accessToken.get("openid");
+                    userAuth = getOrCreateUser(app, access_token);
+                }
+            } catch (Exception e) {
+                logger.warn("wechat auth request failed: GET " + url, e);
+            }
+        } else {
+            logger.warn("wechat auth request failed: the required query parameters 'code', are missing.");
+        }
+        return userAuth;
+    }
+
+    /**
+     * 2018-08-30 zhouzz 微信小程序登录
+     * @param request 请求参数
+     * @return userInfo
+     */
+    private UserAuthentication loginMiniProgram(HttpServletRequest request) {
+        UserAuthentication userAuth = null;
+        User user = new User();
+
+        try {
+            // 请求body体参数
+            Map<String, Object> params = jreader.readValue(acceptJSON(request));
+            String code = (String) params.get("code");
+            String encryptedData = (String) params.get("encryptedData");
+            String iv = (String) params.get("iv");
+
+            if (!StringUtils.isBlank(code)) {
                 String appid = request.getParameter(Config._APPID);
                 App app = Para.getDAO().read(App.id(appid == null ? Config.getRootAppIdentifier() : appid));
-                String[] keys = SecurityUtils.getOAuthKeysForApp(app, Config.WECHAT_PREFIX);
-                String grant_type = Config.getConfigParam("grant_type", "authorization_code");
-                String url = Utils.formatMessage(TOKEN_URL, keys[0], keys[1], authCode, grant_type);
+                String grant_type = Config.getConfigParam("wechat_grant_type", "authorization_code");
+                String[] keys = SecurityUtils.getOAuthKeysForApp(app, Config.WECHAT_MINI_PREFIX);
+                String url = Utils.formatMessage(MINI_URL, keys[0], keys[1], code, grant_type);
                 try {
                     HttpGet tokenPost = new HttpGet(url);
                     Map<String, Object> accessToken = parseAccessToken(httpclient.execute(tokenPost));
-                    if (accessToken != null && accessToken.containsKey("access_token")) {
-                        String access_token = (String) accessToken.get("access_token");
+                    if (accessToken != null && accessToken.containsKey("session_key")) {
+                        String session_key = (String) accessToken.get("session_key");
                         openid = (String) accessToken.get("openid");
-                        userAuth = getOrCreateUser(app, access_token);
+
+                        //解密微信的userInfo信息，从解密数据中获取unionId
+                        String decrypt = AES.wxDecrypt(encryptedData, session_key, iv);
+                        if (StringUtils.isNotBlank(decrypt)) {
+                            logger.info("解密成功");
+                            Map<String, Object> userInfo = jreader.readValue(decrypt);
+
+                            user = getUser(app, user, userInfo);
+                        } else {
+                            logger.warn("解密失败");
+                        }
+    //                    EntityUtils.consumeQuietly(respEntity);
+
+                        // 必须先刷新 ES，不然可能导致后续查询不到数据
+                        CoreUtils.getInstance().getSearch().flush(app.getAppIdentifier());
+
+                        userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
                     }
                 } catch (Exception e) {
-                    logger.warn("wechat auth request failed: GET " + url, e);
+                    logger.warn("wechat mini request failed: POST " + url, e);
                 }
             } else {
-                logger.warn("wechat auth request failed: the required query parameters 'code', are missing.");
+                logger.warn("wechat mini request failed: the required query body 'code', are missing.");
             }
+        } catch (IOException e) {
+            logger.warn("wechat mini request failed: POST ", e);
         }
         return SecurityUtils.checkIfActive(userAuth, SecurityUtils.getAuthenticatedUser(userAuth), true);
     }
@@ -154,9 +253,9 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
         UserAuthentication userAuth = null;
         User user = new User();
         if (accessToken != null) {
-            HttpEntity respEntity = null;
-            String ctype = null;
-            String content = null;
+            HttpEntity respEntity;
+            String ctype;
+            String content;
             String url = Utils.formatMessage(PROFILE_URL, accessToken, openid);
             try {
                 HttpGet profileGet = new HttpGet(url);
@@ -172,59 +271,9 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
 
             if (respEntity != null && StringUtils.equals("text/plain", ctype)) {
                 Map<String, Object> profile = jreader.readValue(content);
-                User u = new User();
-                if (profile != null && profile.containsKey("unionid")) {
-                    String unionid = (String) profile.get("unionid"); //用户统一标识。针对一个微信开放平台帐号下的应用，同一用户的unionid是唯一的。
-                    String openid = (String) profile.get("openid"); //普通用户的标识，对当前开发者帐号唯一
-                    String name = (String) profile.get("nickname"); //普通用户昵称
-                    String pic = (String) profile.get("headimgurl"); //用户头像，最后一个数值代表正方形头像大小（有0、46、64、96、132数值可选，0代表640*640正方形头像），用户没有头像时该项为空
-                    String country = (String) profile.get("country");   //国家，如中国为CN
-                    String province = (String) profile.get("province"); //普通用户个人资料填写的省份
-                    String city = (String) profile.get("city"); //普通用户个人资料填写的城市
-                    String sex = (Integer)profile.get("sex") == 1 ? "男" : "女"; //普通用户性别，1为男性，2为女性
 
-                    // 查询用户是否已注册
-                    HashMap<String, String> map = new HashMap<>();
-                    map.put("wechat", Config.WECHAT_PREFIX + unionid.toLowerCase());
-                    map.put("active", "true");
-                    List<Sysprop> muList = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaUser", map, true);
-                    if (muList != null && !muList.isEmpty()) {
-                        Sysprop mu = muList.get(0);
-                        map.clear();
-                        map.put("id", mu.getParentid());
-                        List<User> userList = CoreUtils.getInstance().getDao().findTerms(app.getAppid(), "user", map, true);
-                        if (userList != null && !userList.isEmpty()) {
-                            user = userList.get(0);
-                            String picture = getPicture(pic);
-                            boolean update = false;
-                            if (!StringUtils.equals(user.getPicture(), picture)) {
-                                user.setPicture(picture);
-                                ParaObjectUtils.setProperty(mu, "picture", picture); // mu.setPicture(picture);
-                                update = true;
-                            }
-                            String sex1 = ParaObjectUtils.getPropertyAsString(mu, "sex"); //  String sex1 = mu.getSex();
-                            if (!StringUtils.equals(sex, sex1)) {
-                                mu.addProperty("sex", sex);
-                                update = true;
-                            }
-                            if (update) {
-                                user.update();
-                                mu.update();
-                            }
-                            SecurityUtils.setTenantInfo(user, mu);
-//                            userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
-//                            return SecurityUtils.checkIfActive(userAuth, user, false);
-                        }
-                    } else {
-                        // 查询该微信号未绑定用户时自动根据微信号注册账号
-                        Sysprop metaUser = createUser(app, name, pic, unionid, sex, user);
-                        String mid = metaUser.getId();
-                        if (mid == null) {
-                            user.delete();
-                            throw new AuthenticationServiceException("Authentication failed: cannot create new metaUser.");
-                        }
-                    }
-                }
+                user = getUser(app, user, profile);
+
             }
             EntityUtils.consumeQuietly(respEntity);
 
@@ -234,6 +283,103 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
             userAuth = new UserAuthentication(new AuthenticatedUserDetails(user));
         }
         return SecurityUtils.checkIfActive(userAuth, user, false);
+    }
+
+    private static String getValueAsString(Map map, String... keys) {
+        if (map == null || map.isEmpty()) {
+            return null;
+        }
+
+        if (keys != null && keys.length > 0) {
+            for (String key : keys) {
+                if (map.containsKey(key)) {
+                    return (String) map.get(key);
+                }
+            }
+        }
+        return null;
+    }
+    private static Integer getValueAsInteger(Map map, String... keys) {
+        if (map == null || map.isEmpty()) {
+            return null;
+        }
+
+        if (keys != null && keys.length > 0) {
+            for (String key : keys) {
+                if (map.containsKey(key)) {
+                    return (Integer) map.get(key);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 2018-08-30 zhouzz 根据微信的userInfo中的unionid获取或者创建系统用户
+     * @param app app
+     * @param user user
+     * @param profile 微信的userInfo
+     * @return 查询或者创建的User对象
+     */
+    private User getUser(App app, User user, Map<String, Object> profile) {
+        if (profile != null && (profile.containsKey("unionid") || profile.containsKey("unionId"))) {
+            String unionid = getValueAsString(profile, "unionid", "unionId"); //用户统一标识。针对一个微信开放平台帐号下的应用，同一用户的unionid是唯一的。
+            String openid = getValueAsString(profile, "openid", "openId"); //普通用户的标识，对当前开发者帐号唯一
+            String name = getValueAsString(profile, "nickname", "nickName"); //普通用户昵称
+
+            String pic = getValueAsString(profile, "headimgurl", "avatarUrl"); //用户头像，最后一个数值代表正方形头像大小（有0、46、64、96、132数值可选，0代表640*640正方形头像），用户没有头像时该项为空
+            String country = (String) profile.get("country");   //国家，如中国为CN
+            String province = (String) profile.get("province"); //普通用户个人资料填写的省份
+            String city = (String) profile.get("city"); //普通用户个人资料填写的城市
+
+            String sex = "";
+            Integer gender = getValueAsInteger(profile, "sex", "gender"); //普通用户性别，1为男性，2为女性
+            if (gender != null) {
+                sex = gender == 1 ? "男" : "女";
+            }
+
+            // 查询用户是否已注册
+            HashMap<String, String> map = new HashMap<>();
+            map.put("wechat", Config.WECHAT_PREFIX + unionid);
+            map.put("active", "true");
+            List<Sysprop> muList = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaUser", map, true);
+            if (muList != null && !muList.isEmpty()) {
+                Sysprop mu = muList.get(0);
+                map.clear();
+                map.put("id", mu.getParentid());
+                List<User> userList = CoreUtils.getInstance().getDao().findTerms(app.getAppid(), "user", map, true);
+                if (userList != null && !userList.isEmpty()) {
+                    user = userList.get(0);
+                    String picture = getPicture(pic);
+                    boolean update = false;
+                    if (!StringUtils.equals(user.getPicture(), picture)) {
+                        user.setPicture(picture);
+                        ParaObjectUtils.setProperty(mu, "picture", picture); // mu.setPicture(picture);
+                        update = true;
+                    }
+                    String sex1 = ParaObjectUtils.getPropertyAsString(mu, "sex"); //  String sex1 = mu.getSex();
+                    if (!StringUtils.equals(sex, sex1)) {
+                        mu.addProperty("sex", sex);
+                        update = true;
+                    }
+                    if (update) {
+                        user.update();
+                        mu.update();
+                    }
+                    SecurityUtils.setTenantInfo(user, mu);
+                }
+            } else {
+                // 查询该微信号未绑定用户时自动根据微信号注册账号
+                Sysprop metaUser = createUser(app, name, pic, unionid, sex, user);
+                String mid = metaUser.getId();
+                if (mid == null) {
+                    user.delete();
+                    throw new AuthenticationServiceException("Authentication failed: cannot create new metaUser.");
+                }
+//                throw new AuthenticationServiceException("您的微信还未在本平台绑定账号，请先绑定账号");
+            }
+        }
+        return user;
     }
 
     private Sysprop createUser(App app, String name, String pic, String unionid, String sex, User user) {
@@ -262,8 +408,8 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
         ParaObjectUtils.setProperty(metaUser, "wechat", Config.WECHAT_PREFIX + unionid); //  metaUser.setWechat(Config.WECHAT_PREFIX + unionid);
         metaUser.addProperty("tenantId", Config.getConfigParam("rootTenantId", "00000000"));
         metaUser.addProperty("username", name);
-        ParaObjectUtils.setProperty(metaUser, "roleId", Arrays.asList("05G109TZB1WFEXA1")); //  metaUser.setRoleId(Arrays.asList("05G109TZB1WFEXA1"));
-        ParaObjectUtils.setProperty(metaUser, "profileId", Arrays.asList()); //  metaUser.setProfileId(Arrays.asList());
+        ParaObjectUtils.setProperty(metaUser, "roleId", Collections.singletonList("05G109TZB1WFEXA1")); //  metaUser.setRoleId(Arrays.asList("05G109TZB1WFEXA1"));
+        ParaObjectUtils.setProperty(metaUser, "profileId", Collections.emptyList()); //  metaUser.setProfileId(Arrays.asList());
         metaUser.create();
         return metaUser;
     }
@@ -297,8 +443,10 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                 String token = EntityUtils.toString(resp1.getEntity(), Config.DEFAULT_ENCODING);
                 if (token != null) {
                     Map<String, Object> tokenObject = jreader.readValue(token);
-                    if (tokenObject != null && tokenObject.containsKey("access_token")) {
+                    if (tokenObject != null && !tokenObject.containsKey("errcode")) {
                         return tokenObject;
+                    } else {
+                        logger.error("get session_key fail, response: " + tokenObject.toString());
                     }
                 }
             } catch (Exception e) {

@@ -105,6 +105,7 @@ public final class Config {
 	public static final String LDAP_PREFIX = "ldap" + SEPARATOR;
 	/** Wechat prefix - defaults to 'Wechat:'. */
 	public static final String WECHAT_PREFIX = "wechat" + SEPARATOR;
+	public static final String WECHAT_MINI_PREFIX = "mini.wechat" + SEPARATOR;
 
 	//////////  INITIALIZATION PARAMETERS  //////////////
 	/**
