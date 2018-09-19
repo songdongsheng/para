@@ -768,12 +768,12 @@ public class User implements ParaObject {
 
 	@JsonIgnore
 	public boolean isTenantAdmin() {
-		return adminTenantId != null && adminTenantId.indexOf(activeTenantId) >= 0;
+		return isTenantAdmin(activeTenantId);
 	}
 
 	@JsonIgnore
 	public boolean isTenantAdmin(String tenantId) {
-		return adminTenantId != null && adminTenantId.indexOf(tenantId) >= 0;
+		return adminTenantId != null && (adminTenantId.indexOf(tenantId) >= 0 || adminTenantId.indexOf("00000000") >= 0);
 	}
 
 	/**
