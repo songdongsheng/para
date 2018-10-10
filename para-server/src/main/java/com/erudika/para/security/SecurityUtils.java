@@ -403,7 +403,7 @@ public final class SecurityUtils {
 
 		HashMap<String, String> map = new HashMap<>();
 		map.put("parentid", user.getId());
-		List<Sysprop> muList = CoreUtils.getInstance().getSearch().findTerms(user.getAppid(), "metaUser", map, true);
+		List<Sysprop> muList = CoreUtils.getInstance().getDao().findTerms(user.getAppid(), "metaUser", map, true);
 		if (muList == null || muList.isEmpty()) {
 			return;
 		}
