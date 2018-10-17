@@ -35,11 +35,15 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.HttpMethod;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.ParseException;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
 
@@ -121,14 +125,16 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
         if (requestURI.endsWith(WECHAT_ACTION)) {
             //2018-08-30 zhouzz 根据请求方式区分登录类型
             String method = request.getMethod();
-            if ("POST".equalsIgnoreCase(method)) {
+            if (HttpMethod.POST.equalsIgnoreCase(method)) {
                 // 微信小程序登录
                 userAuth = loginMiniProgram(request);
 
-            } else if ("GET".equalsIgnoreCase(method)){
+            } else if (HttpMethod.GET.equalsIgnoreCase(method)){
                 //微信二维码登录
                 userAuth = loginWechat(request);
 
+            } else {
+                return null;
             }
         }
         return SecurityUtils.checkIfActive(userAuth, SecurityUtils.getAuthenticatedUser(userAuth), true);
@@ -173,7 +179,8 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                 if (accessToken != null && accessToken.containsKey("access_token")) {
                     String access_token = (String) accessToken.get("access_token");
                     openid = (String) accessToken.get("openid");
-                    userAuth = getOrCreateUser(app, access_token);
+                    String token = openid + ":" + access_token;
+                    userAuth = getOrCreateUser(app, token);
                 }
             } catch (Exception e) {
                 logger.warn("wechat auth request failed: GET " + url, e);
@@ -256,7 +263,11 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
             HttpEntity respEntity;
             String ctype;
             String content;
-            String url = Utils.formatMessage(PROFILE_URL, accessToken, openid);
+
+            String[] parts = accessToken.split(Config.SEPARATOR, 2);
+            String openid = parts[0];
+            String token = parts[1];
+            String url = Utils.formatMessage(PROFILE_URL, token, openid);
             try {
                 HttpGet profileGet = new HttpGet(url);
                 profileGet.setHeader(HttpHeaders.ACCEPT, "application/json");
@@ -271,6 +282,10 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
 
             if (respEntity != null && StringUtils.equals("text/plain", ctype)) {
                 Map<String, Object> profile = jreader.readValue(content);
+                if (profile.containsKey("errcode")) {
+                    logger.error(profile.toString());
+                    throw new RuntimeException(profile.toString());
+                }
 
                 user = getUser(app, user, profile);
 
@@ -352,11 +367,11 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                     user = userList.get(0);
                     String picture = getPicture(pic);
                     boolean update = false;
-                    if (!StringUtils.equals(user.getPicture(), picture)) {
-                        user.setPicture(picture);
-                        ParaObjectUtils.setProperty(mu, "picture", picture); // mu.setPicture(picture);
-                        update = true;
-                    }
+//                    if (!StringUtils.equals(user.getPicture(), picture)) {
+//                        user.setPicture(picture);
+//                        ParaObjectUtils.setProperty(mu, "picture", picture); // mu.setPicture(picture);
+//                        update = true;
+//                    }
                     String sex1 = ParaObjectUtils.getPropertyAsString(mu, "sex"); //  String sex1 = mu.getSex();
                     if (!StringUtils.equals(sex, sex1)) {
                         mu.addProperty("sex", sex);

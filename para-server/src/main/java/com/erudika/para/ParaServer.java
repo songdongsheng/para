@@ -28,7 +28,6 @@ import com.erudika.para.persistence.PersistenceModule;
 import com.erudika.para.queue.QueueModule;
 import com.erudika.para.rest.Api1;
 import com.erudika.para.search.SearchModule;
-import com.erudika.para.security.JWTRestfulAuthFilter;
 import com.erudika.para.security.SecurityModule;
 import com.erudika.para.storage.StorageModule;
 import com.erudika.para.utils.Config;
@@ -135,7 +134,8 @@ public class ParaServer implements WebApplicationInitializer, Ordered {
 		frb.addInitParameter("cors.allowed.headers", "Origin,Accept,X-Requested-With,Content-Type,"
 				+ "Access-Control-Request-Method,Access-Control-Request-Headers,X-Amz-Credential,"
 				+ "X-Amz-Date,Authorization");
-		frb.addUrlPatterns(path, "/" + JWTRestfulAuthFilter.JWT_ACTION);
+//		frb.addUrlPatterns(path, "/" + JWTRestfulAuthFilter.JWT_ACTION);
+		frb.addUrlPatterns("/*");
 		frb.setAsyncSupported(true);
 		frb.setEnabled(Config.CORS_ENABLED);
 		frb.setMatchAfter(false);

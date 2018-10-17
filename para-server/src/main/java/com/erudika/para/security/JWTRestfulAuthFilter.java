@@ -479,7 +479,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 	 */
 	@Inject
 	public void setWechatAuth(WechatAuthFilter wechatAuth) {
-		this.wechatAuth = this.wechatAuth;
+		this.wechatAuth = wechatAuth;
 	}
 
 	public VerificationCodeAuthFilter getVerificationCodeAuth() {
