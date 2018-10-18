@@ -230,6 +230,19 @@ public class ParaServer implements WebApplicationInitializer, Ordered {
 		throw new RuntimeException("UserTrialRegistrationServlet not found");
 	}
 	@Bean
+	public ServletRegistrationBean InsiderLoginServletRegistrationBean() {
+		String[] classNameList = new String[] {"cn.abrain.api.login.servlet.InsiderLoginServlet"};
+		ServiceLoader<Servlet> loader = ServiceLoader.load(Servlet.class, Para.getParaClassLoader());
+		for (Servlet servlet : loader) {
+			for (String className: classNameList) {
+				if (servlet != null && servlet.getClass().getName().equals(className)) {
+					return new ServletRegistrationBean(servlet, "/insiderLogin/*");
+				}
+			}
+		}
+		throw new RuntimeException("InsiderLoginServlet not found");
+	}
+	@Bean
 	public ServletRegistrationBean UserResetServletRegistrationBean() {
 		String[] classNameList = new String[] {
 				"cn.abrain.api.usermgr.UserReSetServlet",
