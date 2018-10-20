@@ -19,12 +19,15 @@ package com.erudika.para.security;
 
 import com.erudika.para.Para;
 import com.erudika.para.core.App;
+import com.erudika.para.core.ParaObject;
 import com.erudika.para.core.User;
-import com.erudika.para.core.utils.CoreUtils;
+import com.erudika.para.core.utils.ParaObjectUtils;
 import com.erudika.para.rest.RestUtils;
 import com.erudika.para.security.filters.*;
 import com.erudika.para.utils.Config;
+import com.erudika.para.utils.Pager;
 import com.erudika.para.utils.Utils;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -47,8 +50,11 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Security filter that intercepts authentication requests (usually coming from the client-side)
@@ -143,9 +149,31 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 						UserAuthentication userAuth = getOrCreateUser(app, provider, token);
 						User user = SecurityUtils.getAuthenticatedUser(userAuth);
 						if (user != null && user.getActive()) {
+						    // 检查当前用户是否已经登录（查询metaLogin登录记录表是否存在有效的数据）
+                            // 存在时则先将上次的登录token失效，更新登录记录表数据失效时间，然后进行登录
+                            String userAgent = request.getHeader("User-Agent");
+                            boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
+                            String agent = isMobileClient ? "Mobile" : "PC";
+
+                            // 查询登录记录
+                            List<ParaObject> metaLogins = getMetaLogins(app.getAppid(), user.getId(), agent);
+                            if (metaLogins != null && !metaLogins.isEmpty()) {
+                                // 过滤出未失效的登录记录
+                                metaLogins = metaLogins.stream().filter(t -> {
+                                    long failTime = ParaObjectUtils.getPropertyAsLong(t, "failTime");
+                                    return failTime == 0;
+                                }).collect(Collectors.toList());
+
+                                metaLogins.forEach(t -> ParaObjectUtils.setProperty(t, "failTime", System.currentTimeMillis()));
+                                Para.getDAO().updateAll(metaLogins);
+                            }
+
                             // issue token
                             SignedJWT newJWT = SecurityUtils.generateJWToken(user, app);
                             if (newJWT != null) {
+                                // 保存token登录记录
+                                createMetaLogin(user.getId(), user.getName(), agent, newJWT.getJWTClaimsSet().getNotBeforeTime().getTime());
+
                                 succesHandler(response, user, newJWT);
                                 return true;
                             }
@@ -177,7 +205,27 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 		return false;
 	}
 
-	private boolean refreshTokenHandler(HttpServletRequest request, HttpServletResponse response) {
+    private List<ParaObject> getMetaLogins(String appid, String userId, String agent) {
+        HashMap<String, String> map = new HashMap<>();
+        map.put("active", "true");
+        map.put("userId", userId);
+        map.put("clientId", agent);
+        return Para.getDAO().findTerms(appid, "metaLogin", map, true, new Pager());
+    }
+
+    private void createMetaLogin(String userId, String userName, String agent, long loginTime) throws ParseException {
+        Map<String, Object> loginMap = new HashMap<>();
+        loginMap.put("type", "metaLogin");
+        loginMap.put("userId", userId);
+        loginMap.put("userName", userName);
+        loginMap.put("clientId", agent);
+        loginMap.put("loginTime", loginTime);
+        ParaObject metaLogin = ParaObjectUtils.setAnnotatedFields(loginMap);
+        metaLogin.setId(Utils.getNewId());
+        metaLogin.create();
+    }
+
+    private boolean refreshTokenHandler(HttpServletRequest request, HttpServletResponse response) {
 		JWTAuthentication jwtAuth = getJWTfromRequest(request, response);
 		if (jwtAuth != null) {
 			try {
@@ -211,9 +259,38 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 				if (user != null) {
 					jwtAuth = (JWTAuthentication) authenticationManager.authenticate(jwtAuth);
 					if (jwtAuth != null && jwtAuth.getApp() != null) {
-						user.resetTokenSecret();
+
+                        JWTClaimsSet claimsSet = jwtAuth.getJwt().getJWTClaimsSet();
+                        Date notBeforeTime = claimsSet.getNotBeforeTime();
+
+                        String userAgent = request.getHeader("User-Agent");
+                        boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
+                        String agent = isMobileClient ? "Mobile" : "PC";
+
+                        List<ParaObject> metaLogins = getMetaLogins(jwtAuth.getApp().getId(), user.getId(), agent);
+                        ParaObject login = null;
+                        if (metaLogins != null && !metaLogins.isEmpty()) {
+                            metaLogins = metaLogins.stream().filter(t -> {
+                                long failTime = ParaObjectUtils.getPropertyAsLong(t, "failTime");
+                                return failTime == 0;
+                            }).collect(Collectors.toList());
+
+                            for (ParaObject metaLogin : metaLogins) {
+                                long loginTime = ParaObjectUtils.getPropertyAsLong(metaLogin, "loginTime");
+                                if (notBeforeTime.getTime() == loginTime) {
+                                    login = metaLogin;
+                                    break;
+                                }
+                            }
+                        }
+                        if (login != null) {
+                            ParaObjectUtils.setProperty(login, "failTime", System.currentTimeMillis());
+                            login.update();
+                        }
+
+//                        user.resetTokenSecret();
 						response.setHeader("APP_ID", jwtAuth.getApp().getAppIdentifier());
-						CoreUtils.getInstance().overwrite(jwtAuth.getApp().getAppIdentifier(), user);
+//						CoreUtils.getInstance().overwrite(jwtAuth.getApp().getAppIdentifier(), user);
 						RestUtils.returnStatusResponse(response, HttpServletResponse.SC_OK,
 								Utils.formatMessage("All tokens revoked for user {0}!", user.getId()));
 						return true;
@@ -265,7 +342,10 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 					response.setHeader("APP_ID", app.getAppIdentifier());
 					User user = Para.getDAO().read(app.getAppIdentifier(), userid);
 					if (user != null) {
-						// standard user JWT auth, restricted access through resource permissions
+					    //2018-10-20 zhouzz 查询当前jwt对应的登录记录（metaLogin）
+                        if (!validateToken(request, jwt, app.getId(), user.getId())) return null;
+
+                        // standard user JWT auth, restricted access through resource permissions
 						SecurityUtils.setTenantInfo(user);
 						return new JWTAuthentication(new AuthenticatedUserDetails(user)).withJWT(jwt).withApp(app);
 					} else {
@@ -280,7 +360,30 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 		return null;
 	}
 
-	private UserAuthentication getOrCreateUser(App app, String identityProvider, String accessToken)
+    private boolean validateToken(HttpServletRequest request, SignedJWT jwt, String appid, String userId) throws ParseException {
+        JWTClaimsSet claimsSet = jwt.getJWTClaimsSet();
+        Date notBeforeTime = claimsSet.getNotBeforeTime();
+
+        String userAgent = request.getHeader("User-Agent");
+        boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
+        String agent = isMobileClient ? "Mobile" : "PC";
+
+        List<ParaObject> metaLogins = getMetaLogins(appid, userId, agent);
+        if (metaLogins != null && !metaLogins.isEmpty()) {
+            for (ParaObject metaLogin : metaLogins) {
+                long loginTime = ParaObjectUtils.getPropertyAsLong(metaLogin, "loginTime");
+                if (notBeforeTime.getTime() == loginTime) {
+                    long failTime = ParaObjectUtils.getPropertyAsLong(metaLogin, "failTime");
+                    if (failTime == 0) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private UserAuthentication getOrCreateUser(App app, String identityProvider, String accessToken)
 			throws IOException {
 		if ("password".equalsIgnoreCase(identityProvider)) {
 			return passwordAuth.getOrCreateUser(app, accessToken);
