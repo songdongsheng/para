@@ -417,70 +417,71 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
      * @return 查询或者创建的User对象
      */
     private User getUser(App app, User user, Map<String, Object> profile) {
-        if (profile != null && (profile.containsKey("unionid") || profile.containsKey("unionId"))) {
-            String openid = getValueAsString(profile, "openid", "openId"); //普通用户的标识，对当前开发者帐号唯一
 
 //            String country = (String) profile.get("country");   //国家，如中国为CN
 //            String province = (String) profile.get("province"); //普通用户个人资料填写的省份
 //            String city = (String) profile.get("city"); //普通用户个人资料填写的城市
 
-            String name = getValueAsString(profile, "nickname", "nickName"); //普通用户昵称
-            String unionid = getValueAsString(profile, "unionid", "unionId"); //用户统一标识。针对一个微信开放平台帐号下的应用，同一用户的unionid是唯一的。
-            String pic = getValueAsString(profile, "headimgurl", "avatarUrl"); //用户头像，最后一个数值代表正方形头像大小（有0、46、64、96、132数值可选，0代表640*640正方形头像），用户没有头像时该项为空
-            String sex = "";
-            Integer gender = getValueAsInteger(profile, "sex", "gender"); //普通用户性别，1为男性，2为女性
-            if (gender != null) {
-                sex = gender == 1 ? "男" : "女";
-            }
+        String name = getValueAsString(profile, "nickname", "nickName"); //普通用户昵称
+        String unionid = getValueAsString(profile, "unionid", "unionId"); //用户统一标识。针对一个微信开放平台帐号下的应用，同一用户的unionid是唯一的。
+        String openid = getValueAsString(profile, "openid", "openId"); //普通用户的标识，对当前开发者帐号唯一
+        String pic = getValueAsString(profile, "headimgurl", "avatarUrl"); //用户头像，最后一个数值代表正方形头像大小（有0、46、64、96、132数值可选，0代表640*640正方形头像），用户没有头像时该项为空
+        String sex = "";
+        Integer gender = getValueAsInteger(profile, "sex", "gender"); //普通用户性别，1为男性，2为女性
+        if (gender != null) {
+            sex = gender == 1 ? "男" : "女";
+        }
 
-            // 查询用户是否已注册
-            HashMap<String, String> map = new HashMap<>();
+        // 查询用户是否已注册
+        HashMap<String, String> map = new HashMap<>();
+        List<Sysprop> muList = null;
+        if (StringUtils.isNotBlank(unionid)) {
             map.put("active", "true");
             map.put("wechat", Config.WECHAT_PREFIX + unionid);
-            List<Sysprop> muList = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaUser", map, true);
+            muList = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaUser", map, true);
+        }
 
-            if (muList == null || muList.isEmpty()) {
-                map = new HashMap<>();
-                map.put("active", "true");
-                map.put("publicOid", openid);
-                muList = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaUser", map, true);
-            }
+        if (muList == null || muList.isEmpty()) {
+            map = new HashMap<>();
+            map.put("active", "true");
+            map.put("publicOid", openid);
+            muList = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaUser", map, true);
+        }
 
-            if (muList != null && !muList.isEmpty()) {
-                Sysprop mu = muList.get(0);
-                map.clear();
-                map.put("id", mu.getParentid());
-                List<User> userList = CoreUtils.getInstance().getDao().findTerms(app.getAppid(), "user", map, true);
-                if (userList != null && !userList.isEmpty()) {
-                    user = userList.get(0);
-                    String picture = getPicture(pic);
-                    boolean update = false;
+        if (muList != null && !muList.isEmpty()) {
+            Sysprop mu = muList.get(0);
+            map.clear();
+            map.put("id", mu.getParentid());
+            List<User> userList = CoreUtils.getInstance().getDao().findTerms(app.getAppid(), "user", map, true);
+            if (userList != null && !userList.isEmpty()) {
+                user = userList.get(0);
+                String picture = getPicture(pic);
+                boolean update = false;
 //                    if (!StringUtils.equals(user.getPicture(), picture)) {
 //                        user.setPicture(picture);
 //                        ParaObjectUtils.setProperty(mu, "picture", picture); // mu.setPicture(picture);
 //                        update = true;
 //                    }
-                    String sex1 = ParaObjectUtils.getPropertyAsString(mu, "sex"); //  String sex1 = mu.getSex();
-                    if (!StringUtils.equals(sex, sex1)) {
-                        mu.addProperty("sex", sex);
-                        update = true;
-                    }
-                    if (update) {
-                        user.update();
-                        mu.update();
-                    }
-                    SecurityUtils.setTenantInfo(user, mu);
+                String sex1 = ParaObjectUtils.getPropertyAsString(mu, "sex"); //  String sex1 = mu.getSex();
+                if (!StringUtils.equals(sex, sex1)) {
+                    mu.addProperty("sex", sex);
+                    update = true;
                 }
-            } else {
-                // 查询该微信号未绑定用户时自动根据微信号注册账号
+                if (update) {
+                    user.update();
+                    mu.update();
+                }
+                SecurityUtils.setTenantInfo(user, mu);
+            }
+        } else {
+            // 查询该微信号未绑定用户时自动根据微信号注册账号
 //                Sysprop metaUser = createUser(app, name, pic, unionid, sex, user);
 //                String mid = metaUser.getId();
 //                if (mid == null) {
 //                    user.delete();
 //                    throw new AuthenticationServiceException("Authentication failed: cannot create new metaUser.");
 //                }
-                throw new AuthenticationServiceException("您的微信还未注册");
-            }
+            throw new AuthenticationServiceException("您的微信还未注册");
         }
         return user;
     }
