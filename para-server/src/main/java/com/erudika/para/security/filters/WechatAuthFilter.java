@@ -418,7 +418,7 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
      */
     private User getUser(App app, User user, Map<String, Object> profile) {
         if (profile != null && (profile.containsKey("unionid") || profile.containsKey("unionId"))) {
-//            String openid = getValueAsString(profile, "openid", "openId"); //普通用户的标识，对当前开发者帐号唯一
+            String openid = getValueAsString(profile, "openid", "openId"); //普通用户的标识，对当前开发者帐号唯一
 
 //            String country = (String) profile.get("country");   //国家，如中国为CN
 //            String province = (String) profile.get("province"); //普通用户个人资料填写的省份
@@ -435,9 +435,17 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
 
             // 查询用户是否已注册
             HashMap<String, String> map = new HashMap<>();
-            map.put("wechat", Config.WECHAT_PREFIX + unionid);
             map.put("active", "true");
+            map.put("wechat", Config.WECHAT_PREFIX + unionid);
             List<Sysprop> muList = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaUser", map, true);
+
+            if (muList == null || muList.isEmpty()) {
+                map = new HashMap<>();
+                map.put("active", "true");
+                map.put("publicOid", openid);
+                muList = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaUser", map, true);
+            }
+
             if (muList != null && !muList.isEmpty()) {
                 Sysprop mu = muList.get(0);
                 map.clear();
@@ -500,10 +508,10 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
         metaUser.setName(name);
         ParaObjectUtils.setProperty(metaUser, "picture", pic); // metaUser.setPicture(pic);
         ParaObjectUtils.setProperty(metaUser, "sex", sex); //  metaUser.setSex(sex);
-        ParaObjectUtils.setProperty(metaUser, "wechat", Config.WECHAT_PREFIX + unionid); //  metaUser.setWechat(Config.WECHAT_PREFIX + unionid);
+        ParaObjectUtils.setProperty(metaUser, "wechat", Config.WECHAT_PREFIX + unionid);
         metaUser.addProperty("tenantId", Config.getConfigParam("rootTenantId", "00000000"));
         metaUser.addProperty("username", name);
-        ParaObjectUtils.setProperty(metaUser, "roleId", Collections.singletonList("05G109TZB1WFEXA1")); //  metaUser.setRoleId(Arrays.asList("05G109TZB1WFEXA1"));
+        ParaObjectUtils.setProperty(metaUser, "roleId", Collections.singletonList("05G109TZB1WFEXA1"));
         ParaObjectUtils.setProperty(metaUser, "profileId", Collections.emptyList()); //  metaUser.setProfileId(Arrays.asList());
         metaUser.create();
         return metaUser;
