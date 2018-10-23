@@ -277,6 +277,22 @@ public class ParaServer implements WebApplicationInitializer, Ordered {
         }
         throw new RuntimeException("UserActiveServlet not found");
     }
+    @Bean
+    public ServletRegistrationBean UserWechatServletRegistrationBean() {
+        String[] classNameList = new String[] {
+                "cn.abrain.api.usermgr.UserWechatServlet",
+                "cn.abrain.api.usermgr.servlet.UserWechatServlet" };
+
+        ServiceLoader<Servlet> loader = ServiceLoader.load(Servlet.class, Para.getParaClassLoader());
+        for (Servlet servlet : loader) {
+            for (String className: classNameList) {
+                if (servlet != null && servlet.getClass().getName().equals(className)) {
+                    return new ServletRegistrationBean(servlet, "/wechat/*");
+                }
+            }
+        }
+        throw new RuntimeException("UserWechatServlet not found");
+    }
 
 	/**
 	 * Called before shutdown.

@@ -155,24 +155,8 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
                             boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
                             String agent = isMobileClient ? "Mobile" : "PC";
 
-                            // 查询登录记录
-                            List<ParaObject> metaLogins = getMetaLogins(app.getAppid(), user.getId(), agent);
-                            if (metaLogins != null && !metaLogins.isEmpty()) {
-                                // 过滤出未失效的登录记录
-                                metaLogins = metaLogins.stream().filter(t -> {
-                                    long failTime = ParaObjectUtils.getPropertyAsLong(t, "failTime");
-                                    return failTime == 0;
-                                }).collect(Collectors.toList());
-
-                                metaLogins.forEach(t -> ParaObjectUtils.setProperty(t, "failTime", System.currentTimeMillis()));
-                                Para.getDAO().updateAll(metaLogins);
-                            }
-
-                            // issue token
-                            SignedJWT newJWT = SecurityUtils.generateJWToken(user, app);
+                            SignedJWT newJWT = getJWToken(app, user, agent);
                             if (newJWT != null) {
-                                // 保存token登录记录
-                                createMetaLogin(user.getId(), user.getName(), agent, newJWT.getJWTClaimsSet().getNotBeforeTime().getTime());
 
                                 succesHandler(response, user, newJWT);
                                 return true;
@@ -205,12 +189,31 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 		return false;
 	}
 
-    private List<ParaObject> getMetaLogins(String appid, String userId, String agent) {
+    private SignedJWT getJWToken(App app, User user, String agent) throws ParseException {
+        // 查询登录记录
         HashMap<String, String> map = new HashMap<>();
         map.put("active", "true");
-        map.put("userId", userId);
+        map.put("userId", user.getId());
         map.put("clientId", agent);
-        return Para.getDAO().findTerms(appid, "metaLogin", map, true, new Pager());
+        List<ParaObject> metaLogins = Para.getDAO().findTerms(app.getAppid(), "metaLogin", map, true, new Pager());
+        if (metaLogins != null && !metaLogins.isEmpty()) {
+            // 过滤出未失效的登录记录
+            metaLogins = metaLogins.stream().filter(t -> {
+                long failTime = ParaObjectUtils.getPropertyAsLong(t, "failTime");
+                return failTime == 0;
+            }).collect(Collectors.toList());
+
+            metaLogins.forEach(t -> ParaObjectUtils.setProperty(t, "failTime", System.currentTimeMillis()));
+            Para.getDAO().updateAll(metaLogins);
+        }
+
+        // issue token
+        SignedJWT signedJWT = SecurityUtils.generateJWToken(user, app);
+        if (signedJWT != null) {
+            // 保存token登录记录
+            createMetaLogin(user.getId(), user.getName(), agent, signedJWT.getJWTClaimsSet().getNotBeforeTime().getTime());
+        }
+        return signedJWT;
     }
 
     private void createMetaLogin(String userId, String userName, String agent, long loginTime) throws ParseException {
@@ -266,8 +269,11 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
                         String userAgent = request.getHeader("User-Agent");
                         boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
                         String agent = isMobileClient ? "Mobile" : "PC";
-
-                        List<ParaObject> metaLogins = getMetaLogins(jwtAuth.getApp().getId(), user.getId(), agent);
+                        HashMap<String, String> map = new HashMap<>();
+                        map.put("active", "true");
+                        map.put("userId", user.getId());
+                        map.put("clientId", agent);
+                        List<ParaObject> metaLogins = Para.getDAO().findTerms(jwtAuth.getApp().getAppid(), "metaLogin", map, true, new Pager());
                         ParaObject login = null;
                         if (metaLogins != null && !metaLogins.isEmpty()) {
                             metaLogins = metaLogins.stream().filter(t -> {
@@ -368,7 +374,11 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
         boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
         String agent = isMobileClient ? "Mobile" : "PC";
 
-        List<ParaObject> metaLogins = getMetaLogins(appid, userId, agent);
+        HashMap<String, String> map = new HashMap<>();
+        map.put("active", "true");
+        map.put("userId", userId);
+        map.put("clientId", agent);
+        List<ParaObject> metaLogins = Para.getDAO().findTerms(appid, "metaLogin", map, true, new Pager());
         if (metaLogins != null && !metaLogins.isEmpty()) {
             for (ParaObject metaLogin : metaLogins) {
                 long loginTime = ParaObjectUtils.getPropertyAsLong(metaLogin, "loginTime");
@@ -387,9 +397,9 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 			throws IOException {
 		if ("password".equalsIgnoreCase(identityProvider)) {
 			return passwordAuth.getOrCreateUser(app, accessToken);
-		} else if ("wechat".equalsIgnoreCase(identityProvider)) {
-			// 微信登录
-			return wechatAuth.getOrCreateUser(app, accessToken);
+//		} else if ("wechat".equalsIgnoreCase(identityProvider)) {
+//			// 微信登录
+//			return wechatAuth.getOrCreateUser(app, accessToken);
 		} else if ("verificationcode".equalsIgnoreCase(identityProvider)) {
 			// 验证码登陆
 			return verificationCodeAuth.getOrCreateUser(app, accessToken);
