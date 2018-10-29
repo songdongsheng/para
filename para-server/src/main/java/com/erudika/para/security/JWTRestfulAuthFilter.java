@@ -377,7 +377,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
         HashMap<String, String> map = new HashMap<>();
         map.put("active", "true");
         map.put("userId", userId);
-        map.put("clientId", agent);
+//        map.put("clientId", agent);
         List<ParaObject> metaLogins = Para.getDAO().findTerms(appid, "metaLogin", map, true, new Pager());
         if (metaLogins != null && !metaLogins.isEmpty()) {
             for (ParaObject metaLogin : metaLogins) {
