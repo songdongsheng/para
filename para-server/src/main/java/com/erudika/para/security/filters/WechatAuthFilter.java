@@ -25,6 +25,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.Authentication;
@@ -33,11 +34,14 @@ import org.springframework.security.web.authentication.AbstractAuthenticationPro
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.HttpMethod;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -98,6 +102,10 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                 String userAgent = request.getHeader("User-Agent");
                 boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
                 String agent = isMobileClient ? "Mobile" : "PC";
+                if (isMobileClient) {
+                    boolean isWechat = ParaObjectUtils.isMicroMessenger(userAgent);
+                    agent = isWechat ? "MicroMessenger" : agent;
+                }
 
                 String appid = request.getParameter(Config._APPID);
                 App app = Para.getDAO().read(App.id(appid == null ? Config.getRootAppIdentifier() : appid));
@@ -115,13 +123,19 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
                 logger.error("An internal error occurred while trying to authenticate the user.", failed);
                 unsuccessfulAuthentication(request, response, failed);
                 return;
+            } catch (AuthenticationCredentialsNotFoundException failed) {
+                logger.error("user not found", failed);
+
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.setContentType(MediaType.APPLICATION_JSON);
+                ServletOutputStream out = response.getOutputStream();
+                ParaObjectUtils.getJsonWriter().writeValue(out, RestUtils.getStatusResponse(Response.Status.fromStatusCode(HttpServletResponse.SC_FORBIDDEN), failed.getMessage()).getEntity());
+                return;
             } catch (AuthenticationException failed) {
-                // Authentication failed
-//                unsuccessfulAuthentication(request, response, failed);
                 RestUtils.returnStatusResponse(response, HttpServletResponse.SC_FORBIDDEN, failed.getMessage());
                 return;
             } catch (ParseException e) {
-                RestUtils.returnStatusResponse(response, HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
+                RestUtils.returnStatusResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
                 return;
             }
         }
@@ -442,10 +456,12 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
         }
 
         if (muList == null || muList.isEmpty()) {
-            map = new HashMap<>();
-            map.put("active", "true");
-            map.put("publicOid", openid);
-            muList = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaUser", map, true);
+            if (StringUtils.isNotBlank(openid)) {
+                map = new HashMap<>();
+                map.put("active", "true");
+                map.put("publicOid", openid);
+                muList = CoreUtils.getInstance().getDao().findTerms(app.getAppIdentifier(), "metaUser", map, true);
+            }
         }
 
         if (muList != null && !muList.isEmpty()) {
@@ -481,7 +497,7 @@ public class WechatAuthFilter extends AbstractAuthenticationProcessingFilter {
 //                    user.delete();
 //                    throw new AuthenticationServiceException("Authentication failed: cannot create new metaUser.");
 //                }
-            throw new AuthenticationServiceException("您的微信还未注册");
+            throw new AuthenticationCredentialsNotFoundException("您的微信还未注册");
         }
         return user;
     }

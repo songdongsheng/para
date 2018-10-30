@@ -23,7 +23,6 @@ import com.erudika.para.core.ParaObject;
 import com.erudika.para.core.Sysprop;
 import com.erudika.para.utils.Config;
 import com.erudika.para.utils.Utils;
-import static com.erudika.para.utils.Utils.getAllDeclaredFields;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -31,14 +30,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
-import java.util.*;
-
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.collections.bidimap.DualHashBidiMap;
@@ -49,6 +40,22 @@ import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.util.ClassUtils;
+
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static com.erudika.para.utils.Utils.getAllDeclaredFields;
 
 /**
  * Contains methods for object/grid mapping, JSON serialization, class scanning and resolution.
@@ -731,5 +738,10 @@ public final class ParaObjectUtils {
 	// 根据 HTTP 的 'User-Agent' 判断是否是移动端访问
 	public static boolean isMobileClient(String userAgent) {
 		return StringUtils.isNotEmpty(userAgent) && ((userAgent.contains("Android")) || (userAgent.contains("iPhone")));
+	}
+
+	// 根据 HTTP 的 'User-Agent' 判断是否是微信浏览器访问
+	public static boolean isMicroMessenger(String userAgent) {
+		return StringUtils.isNotEmpty(userAgent) && ((userAgent.contains("MicroMessenger")));
 	}
 }

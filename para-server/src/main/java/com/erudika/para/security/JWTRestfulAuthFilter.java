@@ -154,6 +154,10 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
                             String userAgent = request.getHeader("User-Agent");
                             boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
                             String agent = isMobileClient ? "Mobile" : "PC";
+                            if (isMobileClient) {
+                                boolean isWechat = ParaObjectUtils.isMicroMessenger(userAgent);
+                                agent = isWechat ? "MicroMessenger" : agent;
+                            }
 
                             SignedJWT newJWT = getJWToken(app, user, agent);
                             if (newJWT != null) {
@@ -269,6 +273,11 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
                         String userAgent = request.getHeader("User-Agent");
                         boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
                         String agent = isMobileClient ? "Mobile" : "PC";
+                        if (isMobileClient) {
+                            boolean isWechat = ParaObjectUtils.isMicroMessenger(userAgent);
+                            agent = isWechat ? "MicroMessenger" : agent;
+                        }
+
                         HashMap<String, String> map = new HashMap<>();
                         map.put("active", "true");
                         map.put("userId", user.getId());
@@ -370,10 +379,9 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
         JWTClaimsSet claimsSet = jwt.getJWTClaimsSet();
         Date notBeforeTime = claimsSet.getNotBeforeTime();
 
-        String userAgent = request.getHeader("User-Agent");
-        boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
-        String agent = isMobileClient ? "Mobile" : "PC";
-
+//        String userAgent = request.getHeader("User-Agent");
+//        boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
+//        String agent = isMobileClient ? "Mobile" : "PC";
         HashMap<String, String> map = new HashMap<>();
         map.put("active", "true");
         map.put("userId", userId);
@@ -382,13 +390,13 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
         List<ParaObject> metaLogins = Para.getDAO().findTerms(appid, "metaLogin", map, true, new Pager());
         if (metaLogins != null && !metaLogins.isEmpty()) {
             for (ParaObject metaLogin : metaLogins) {
-                long loginTime = ParaObjectUtils.getPropertyAsLong(metaLogin, "loginTime");
-                if (notBeforeTime.getTime() == loginTime) {
+//                long loginTime = ParaObjectUtils.getPropertyAsLong(metaLogin, "loginTime");
+//                if (notBeforeTime.getTime() == loginTime) {
                     long failTime = ParaObjectUtils.getPropertyAsLong(metaLogin, "failTime");
                     if (failTime == 0) {
                         return true;
                     }
-                }
+//                }
             }
         }
         return false;
