@@ -375,6 +375,12 @@
 			<artifactId>dom4j</artifactId>
 			<version>2.1.0</version>
 		</dependency>
+
+		<dependency>
+			<groupId>com.facebook.presto</groupId>
+			<artifactId>presto-jdbc</artifactId>
+			<version>0.213</version>
+		</dependency>
     </dependencies>
 
 	<build>
