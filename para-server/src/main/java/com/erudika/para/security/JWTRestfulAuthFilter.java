@@ -21,6 +21,7 @@ import com.erudika.para.Para;
 import com.erudika.para.core.App;
 import com.erudika.para.core.ParaObject;
 import com.erudika.para.core.User;
+import com.erudika.para.core.utils.CoreUtils;
 import com.erudika.para.core.utils.ParaObjectUtils;
 import com.erudika.para.rest.RestUtils;
 import com.erudika.para.security.filters.*;
@@ -151,17 +152,18 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 						if (user != null && user.getActive()) {
 						    // 检查当前用户是否已经登录（查询metaLogin登录记录表是否存在有效的数据）
                             // 存在时则先将上次的登录token失效，更新登录记录表数据失效时间，然后进行登录
-                            String userAgent = request.getHeader("User-Agent");
-                            boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
-                            String agent = isMobileClient ? "Mobile" : "PC";
-                            if (isMobileClient) {
-                                boolean isWechat = ParaObjectUtils.isMicroMessenger(userAgent);
-                                agent = isWechat ? "MicroMessenger" : agent;
+                            // isMetaLogin参数用于开发人员调试问题使用，isMetaLogin=false时不会生成登录日志，不影响客户账户的使用
+                            Boolean isMetaLogin = (Boolean) entity.getOrDefault("isMetaLogin", true);
+
+                            SignedJWT newJWT;
+                            if (isMetaLogin == null || isMetaLogin) {
+                                String agent = getClientAgent(request);
+                                newJWT = getJWToken(app, user, agent);
+                            } else {
+                                newJWT = SecurityUtils.generateJWToken(user, app);
                             }
 
-                            SignedJWT newJWT = getJWToken(app, user, agent);
                             if (newJWT != null) {
-
                                 succesHandler(response, user, newJWT);
                                 return true;
                             }
@@ -195,12 +197,8 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 
     private SignedJWT getJWToken(App app, User user, String agent) throws ParseException {
         // 查询登录记录
-        HashMap<String, String> map = new HashMap<>();
-        map.put("active", "true");
-        map.put("userId", user.getId());
-        map.put("clientId", agent);
-        List<ParaObject> metaLogins = Para.getDAO().findTerms(app.getAppid(), "metaLogin", map, true, new Pager());
-        if (metaLogins != null && !metaLogins.isEmpty()) {
+		List<ParaObject> metaLogins = getMetaLogins(app.getAppid(), user.getId(), agent, 0);
+		if (metaLogins != null && !metaLogins.isEmpty()) {
             // 过滤出未失效的登录记录
             metaLogins = metaLogins.stream().filter(t -> {
                 long failTime = ParaObjectUtils.getPropertyAsLong(t, "failTime");
@@ -208,7 +206,7 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
             }).collect(Collectors.toList());
 
             metaLogins.forEach(t -> ParaObjectUtils.setProperty(t, "failTime", System.currentTimeMillis()));
-            Para.getDAO().updateAll(metaLogins);
+			CoreUtils.getInstance().getDao().updateAll(metaLogins);
         }
 
         // issue token
@@ -220,7 +218,31 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
         return signedJWT;
     }
 
-    private void createMetaLogin(String userId, String userName, String agent, long loginTime) throws ParseException {
+    private String getClientAgent(HttpServletRequest request) {
+        String userAgent = request.getHeader("User-Agent");
+        boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
+        String agent = isMobileClient ? "Mobile" : "PC";
+        if (isMobileClient) {
+            boolean isWechat = ParaObjectUtils.isMicroMessenger(userAgent);
+            agent = isWechat ? "MicroMessenger" : agent;
+        }
+        return agent;
+    }
+
+	private List<ParaObject> getMetaLogins(String appid, String userId, String agent, long loginTime) {
+		HashMap<String, String> map = new HashMap<>();
+		map.put("active", "true");
+		map.put("userId", userId);
+		if (StringUtils.isNotBlank(agent)) {
+            map.put("clientId", agent);
+        }
+        if (loginTime > 0) {
+            map.put("loginTime", String.valueOf(loginTime));
+        }
+		return CoreUtils.getInstance().getDao().findTerms(appid, "metaLogin", map, true, new Pager(1, 10));
+	}
+
+	private void createMetaLogin(String userId, String userName, String agent, long loginTime) throws ParseException {
         Map<String, Object> loginMap = new HashMap<>();
         loginMap.put("type", "metaLogin");
         loginMap.put("userId", userId);
@@ -230,6 +252,32 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
         ParaObject metaLogin = ParaObjectUtils.setAnnotatedFields(loginMap);
         metaLogin.setId(Utils.getNewId());
         metaLogin.create();
+    }
+
+    private boolean validateToken(HttpServletRequest request, SignedJWT jwt, String appid, String userId) throws ParseException {
+        JWTClaimsSet claimsSet = jwt.getJWTClaimsSet();
+        Date notBeforeTime = claimsSet.getNotBeforeTime();
+
+//        String agent = getClientAgent(request);
+//        HashMap<String, String> map = new HashMap<>();
+//        map.put("active", "true");
+//        map.put("userId", userId);
+//        map.put("loginTime", String.valueOf(notBeforeTime.getTime()));
+////        map.put("clientId", agent);
+//        List<ParaObject> metaLogins = CoreUtils.getInstance().getDao().findTerms(appid, "metaLogin", map, true);
+        List<ParaObject> metaLogins = getMetaLogins(appid, userId, null, notBeforeTime.getTime());
+        if (metaLogins != null && !metaLogins.isEmpty()) {
+            for (ParaObject metaLogin : metaLogins) {
+//                long loginTime = ParaObjectUtils.getPropertyAsLong(metaLogin, "loginTime");
+//                if (notBeforeTime.getTime() == loginTime) {
+                long failTime = ParaObjectUtils.getPropertyAsLong(metaLogin, "failTime");
+                if (failTime == 0) {
+                    return true;
+                }
+//                }
+            }
+        }
+        return false;
     }
 
     private boolean refreshTokenHandler(HttpServletRequest request, HttpServletResponse response) {
@@ -270,37 +318,16 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
                         JWTClaimsSet claimsSet = jwtAuth.getJwt().getJWTClaimsSet();
                         Date notBeforeTime = claimsSet.getNotBeforeTime();
 
-                        String userAgent = request.getHeader("User-Agent");
-                        boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
-                        String agent = isMobileClient ? "Mobile" : "PC";
-                        if (isMobileClient) {
-                            boolean isWechat = ParaObjectUtils.isMicroMessenger(userAgent);
-                            agent = isWechat ? "MicroMessenger" : agent;
-                        }
-
-                        HashMap<String, String> map = new HashMap<>();
-                        map.put("active", "true");
-                        map.put("userId", user.getId());
-                        map.put("clientId", agent);
-                        List<ParaObject> metaLogins = Para.getDAO().findTerms(jwtAuth.getApp().getAppid(), "metaLogin", map, true, new Pager());
-                        ParaObject login = null;
+						String agent = getClientAgent(request);
+						List<ParaObject> metaLogins = getMetaLogins(jwtAuth.getApp().getAppid(), user.getId(), agent, 0);
                         if (metaLogins != null && !metaLogins.isEmpty()) {
                             metaLogins = metaLogins.stream().filter(t -> {
                                 long failTime = ParaObjectUtils.getPropertyAsLong(t, "failTime");
                                 return failTime == 0;
                             }).collect(Collectors.toList());
 
-                            for (ParaObject metaLogin : metaLogins) {
-                                long loginTime = ParaObjectUtils.getPropertyAsLong(metaLogin, "loginTime");
-                                if (notBeforeTime.getTime() == loginTime) {
-                                    login = metaLogin;
-                                    break;
-                                }
-                            }
-                        }
-                        if (login != null) {
-                            ParaObjectUtils.setProperty(login, "failTime", System.currentTimeMillis());
-                            login.update();
+                            metaLogins.forEach(t -> ParaObjectUtils.setProperty(t, "failTime", System.currentTimeMillis()));
+			                CoreUtils.getInstance().getDao().updateAll(metaLogins);
                         }
 
 //                        user.resetTokenSecret();
@@ -374,33 +401,6 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 		}
 		return null;
 	}
-
-    private boolean validateToken(HttpServletRequest request, SignedJWT jwt, String appid, String userId) throws ParseException {
-        JWTClaimsSet claimsSet = jwt.getJWTClaimsSet();
-        Date notBeforeTime = claimsSet.getNotBeforeTime();
-
-//        String userAgent = request.getHeader("User-Agent");
-//        boolean isMobileClient = ParaObjectUtils.isMobileClient(userAgent);
-//        String agent = isMobileClient ? "Mobile" : "PC";
-        HashMap<String, String> map = new HashMap<>();
-        map.put("active", "true");
-        map.put("userId", userId);
-        map.put("loginTime", String.valueOf(notBeforeTime.getTime()));
-//        map.put("clientId", agent);
-        List<ParaObject> metaLogins = Para.getDAO().findTerms(appid, "metaLogin", map, true, new Pager());
-        if (metaLogins != null && !metaLogins.isEmpty()) {
-            for (ParaObject metaLogin : metaLogins) {
-//                long loginTime = ParaObjectUtils.getPropertyAsLong(metaLogin, "loginTime");
-//                if (notBeforeTime.getTime() == loginTime) {
-                    long failTime = ParaObjectUtils.getPropertyAsLong(metaLogin, "failTime");
-                    if (failTime == 0) {
-                        return true;
-                    }
-//                }
-            }
-        }
-        return false;
-    }
 
     private UserAuthentication getOrCreateUser(App app, String identityProvider, String accessToken)
 			throws IOException {
