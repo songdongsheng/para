@@ -727,4 +727,14 @@ public final class ParaObjectUtils {
 
 		return po;
 	}
+
+	// 根据 HTTP 的 'User-Agent' 判断是否是移动端访问
+	public static boolean isMobileClient(String userAgent) {
+		return StringUtils.isNotEmpty(userAgent) && ((userAgent.contains("Android")) || (userAgent.contains("iPhone")));
+	}
+
+	// 根据 HTTP 的 'User-Agent' 判断是否是微信浏览器访问
+	public static boolean isMicroMessenger(String userAgent) {
+		return StringUtils.isNotEmpty(userAgent) && ((userAgent.contains("MicroMessenger")));
+	}
 }

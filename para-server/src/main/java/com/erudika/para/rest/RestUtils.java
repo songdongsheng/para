@@ -989,7 +989,7 @@ public final class RestUtils {
 	 * @param status status code
 	 * @param message error message
 	 */
-	public static void returnStatusResponse(HttpServletResponse response, int status, String message) {
+	public static void returnStatusResponse(HttpServletResponse response, int status, Object message) {
 		if (response == null) {
 			return;
 		}
@@ -998,8 +998,13 @@ public final class RestUtils {
 			response.setStatus(status);
 			response.setContentType(MediaType.APPLICATION_JSON);
 			out = response.getWriter();
-			ParaObjectUtils.getJsonWriter().writeValue(out, getStatusResponse(Response.Status.
-					fromStatusCode(status), message).getEntity());
+
+			if (message instanceof String) {
+                ParaObjectUtils.getJsonWriter().writeValue(out, getStatusResponse(Response.Status.
+                        fromStatusCode(status), message.toString()).getEntity());
+            } else {
+                ParaObjectUtils.getJsonWriter().writeValue(out, message);
+            }
 		} catch (Exception ex) {
 			logger.error(null, ex);
 		} finally {

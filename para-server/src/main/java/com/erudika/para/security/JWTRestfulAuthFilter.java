@@ -284,9 +284,9 @@ public class JWTRestfulAuthFilter extends GenericFilterBean {
 			throws IOException {
 		if ("password".equalsIgnoreCase(identityProvider)) {
 			return passwordAuth.getOrCreateUser(app, accessToken);
-		} else if ("wechat".equalsIgnoreCase(identityProvider)) {
-			// 微信登录
-			return wechatAuth.getOrCreateUser(app, accessToken);
+//		} else if ("wechat".equalsIgnoreCase(identityProvider)) {
+//			// 微信登录
+//			return wechatAuth.getOrCreateUser(app, accessToken);
 		} else if ("verificationcode".equalsIgnoreCase(identityProvider)) {
 			// 验证码登陆
 			return verificationCodeAuth.getOrCreateUser(app, accessToken);
