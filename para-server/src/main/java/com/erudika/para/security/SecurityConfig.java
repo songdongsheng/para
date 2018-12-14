@@ -132,6 +132,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		web.ignoring().requestMatchers(IgnoredRequestMatcher.INSTANCE, new AntPathRequestMatcher("/active/**"));
 		web.ignoring().requestMatchers(IgnoredRequestMatcher.INSTANCE, new AntPathRequestMatcher("/trialRegister/**"));
 		web.ignoring().requestMatchers(IgnoredRequestMatcher.INSTANCE, new AntPathRequestMatcher("/insiderLogin/**"));
+		web.ignoring().requestMatchers(IgnoredRequestMatcher.INSTANCE, new AntPathRequestMatcher("/wechat/**"));
 		DefaultHttpFirewall firewall = new DefaultHttpFirewall();
 		firewall.setAllowUrlEncodedSlash(true);
 		web.httpFirewall(firewall);
